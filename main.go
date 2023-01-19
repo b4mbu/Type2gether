@@ -29,16 +29,16 @@ type Cursor struct {
     linePos *Line
     charPos *Char
     head    *Line
+    id      int64
     // Xcoord
     // Tcoord
 }
 
 type Text struct {
     head  *Line
-    tail  *Line
     size  uint32
+    cursors []*Cursor
 }
-
 
 func CreateChar(value rune) *Char {
     char := new(Char)
@@ -59,6 +59,11 @@ func CreateCursor() *Cursor {
 
 func (c *Cursor) SetLine (l *Line) {
     c.linePos = l
+}
+
+func (c *Cursor) InsertCharBefore (value rune) error {
+    c.InsertCharAfter(value)
+    return c.Right()
 }
 
 func (c *Cursor) InsertCharAfter(value rune) error {
@@ -239,12 +244,13 @@ func (c *Cursor) setPositionInCurrentLine(index uint8) error {
 
 func CreateTextFromFile(reader *bufio.Reader) *Cursor{ // TODO: add error
     cursor := CreateCursor()
-    //fmt.Println("cursor wos created succ")
+    //fmt.Println("cursor was created succ")
     for {
         textLine, err := reader.ReadString(endl)
         for _, c := range textLine {
-            cursor.InsertCharAfter(c)
-            cursor.Right()
+            cursor.InsertCharBefore(c)
+          // cursor.InsertCharAfter(c)
+           //cursor.Right()
         }
         if err == io.EOF {
             return cursor
