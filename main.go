@@ -1,11 +1,11 @@
 package main
 
 import (
-    "fmt"
     "errors"
     "bufio"
     "io"
-    "os"
+    "github.com/veandco/go-sdl2/sdl"
+    "github.com/veandco/go-sdl2/ttf"
 )
 
 const (
@@ -13,14 +13,14 @@ const (
 )
 
 type Char struct {
-	value  rune
-	next  *Char
+    value  rune
+    next  *Char
     prev  *Char
 }
 
 type Line struct {
-	value *Char
-	next  *Line
+    value *Char
+    next  *Line
     prev  *Line
     size   uint8
 }
@@ -263,21 +263,60 @@ func CreateTextFromFile(reader *bufio.Reader) *Cursor{ // TODO: add error
     return cursor
 }
 
-
 func main() {
-    file, _ := os.Open("text.txt")
-    defer file.Close()
+    if err := sdl.Init(sdl.INIT_EVERYTHING); err != nil {
+		panic(err)
+	}
+	defer sdl.Quit()
 
-    cursor := CreateTextFromFile(bufio.NewReader(file))
-    ptr := cursor.head
-
-    for ptr != nil {
-        chrPtr := ptr.value
-        for chrPtr != nil {
-            fmt.Printf("%c", chrPtr.value)
-            chrPtr = chrPtr.next
-        }
-        ptr = ptr.next
+    if err := ttf.Init(); err != nil {
+        panic(err)
     }
+    defer ttf.Quit()
+
+    window, err := sdl.CreateWindow("test", sdl.WINDOWPOS_UNDEFINED, sdl.WINDOWPOS_UNDEFINED,
+		800, 600, sdl.WINDOW_SHOWN)
+
+	if err != nil {
+		panic(err)
+	}
+
+	defer window.Destroy()
+
+    font, err := ttf.OpenFont("font.ttf", 100)
+    if err != nil {
+        panic(err)
+    }
+
+    fontSurface, _ := font.RenderUTF8Blended("hello, world", sdl.Color{255, 0, 0, 100})
+    renderer, err := sdl.CreateRenderer(window, -1, sdl.RENDERER_ACCELERATED)
+
+    if err != nil {
+        panic(err)
+    }
+
+    texture, _ := renderer.CreateTextureFromSurface(fontSurface)
+    var X, Y int32 = 20, 20
+	running := true
+	for running {
+		for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
+			switch event.(type) {
+			case *sdl.QuitEvent:
+				println("Quit")
+				running = false
+				break
+			}
+		}
+        renderer.Clear()
+        renderer.FillRect(nil)
+        renderer.Copy(texture, nil, &sdl.Rect{X: X, Y: Y, W: fontSurface.W, H: fontSurface.H}) 
+        renderer.Present()
+        sdl.Delay(50)
+        X++
+        Y++
+	}
+    font.Close()
+    fontSurface.Free()
+    texture.Destroy()
 }
 
