@@ -1,11 +1,12 @@
 package main
 
 import (
-    "errors"
-    "bufio"
-    "io"
-    "github.com/veandco/go-sdl2/sdl"
-    "github.com/veandco/go-sdl2/ttf"
+	"bufio"
+	"errors"
+	//"fmt"
+	"io"
+	"github.com/veandco/go-sdl2/sdl"
+	"github.com/veandco/go-sdl2/ttf"
 )
 
 const (
@@ -39,6 +40,12 @@ type Text struct {
     size  uint32
     cursors []*Cursor
 }
+
+type Cache struct {
+    Texture *sdl.Texture
+    Width   int32
+}
+
 
 func CreateChar(value rune) *Char {
     char := new(Char)
@@ -263,7 +270,19 @@ func CreateTextFromFile(reader *bufio.Reader) *Cursor{ // TODO: add error
     return cursor
 }
 
+
+var (
+    AllSuportedChars string = "qwertyuiop[]asdfghjkl;zxcvbnm,./1234567890-=+"
+)
+
 func main() {
+    PreRenderredChars :=make(map[rune]Cache)
+    var (
+        ScreenHeight int32  =      896
+        ScreenWidth  int32 =       1200
+        FontSize   =               52
+    )
+
     if err := sdl.Init(sdl.INIT_EVERYTHING); err != nil {
 		panic(err)
 	}
@@ -275,7 +294,7 @@ func main() {
     defer ttf.Quit()
 
     window, err := sdl.CreateWindow("test", sdl.WINDOWPOS_UNDEFINED, sdl.WINDOWPOS_UNDEFINED,
-		800, 600, sdl.WINDOW_SHOWN)
+		 ScreenWidth,ScreenHeight, sdl.WINDOW_SHOWN)
 
 	if err != nil {
 		panic(err)
@@ -283,10 +302,11 @@ func main() {
 
 	defer window.Destroy()
 
-    font, err := ttf.OpenFont("font.ttf", 100)
+    font, err := ttf.OpenFont("nice.ttf", FontSize)
     if err != nil {
         panic(err)
     }
+
 
     fontSurface, _ := font.RenderUTF8Blended("hello, world", sdl.Color{255, 0, 0, 100})
     renderer, err := sdl.CreateRenderer(window, -1, sdl.RENDERER_ACCELERATED)
@@ -295,8 +315,21 @@ func main() {
         panic(err)
     }
 
-    texture, _ := renderer.CreateTextureFromSurface(fontSurface)
-    var X, Y int32 = 20, 20
+    var X int32 = 300
+    var Y int32 = 120 
+    for _, el := range AllSuportedChars {
+        fontSurface, _ := font.RenderUTF8Blended(string(el), sdl.Color{255, 0, 0, 255})
+        texture, _ := renderer.CreateTextureFromSurface(fontSurface)
+        PreRenderredChars[el] = Cache{texture, fontSurface.W}
+    }
+    textData := "hello, world"
+
+    //texture, _ := renderer.CreateTextureFromSurface(fontSurface)
+    var (
+        dx int32 = 5
+        dy int32 = 8
+    )
+
 	running := true
 	for running {
 		for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
@@ -307,16 +340,38 @@ func main() {
 				break
 			}
 		}
+        // movement =)
+        if X + dx <= 0 {
+            dx *= -1
+            X += 1
+        }
+        if X + int32(FontSize * len(textData)) + dx >= ScreenWidth {
+            dx *= -1
+            X -= 1
+        }
+
+        if Y <= 0{
+            dy *= -1
+            Y += 1
+        }
+        if Y + int32(FontSize)  >= ScreenHeight {
+            dy *= -1
+            Y -= 1
+        }
+
+        Y += dy
+        X += dx
         renderer.Clear()
         renderer.FillRect(nil)
-        renderer.Copy(texture, nil, &sdl.Rect{X: X, Y: Y, W: fontSurface.W, H: fontSurface.H}) 
+        for i := 0; i < len(textData); i++ {
+            texture := PreRenderredChars[rune(textData[i])]
+            renderer.Copy(texture.Texture, nil, &sdl.Rect{X:int32(i*FontSize) + X, Y:Y, W:texture.Width, H:int32(FontSize)})
+        }
         renderer.Present()
         sdl.Delay(50)
-        X++
-        Y++
 	}
     font.Close()
     fontSurface.Free()
-    texture.Destroy()
+    //texture.Destroy()
 }
 
