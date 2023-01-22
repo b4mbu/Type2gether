@@ -5,6 +5,7 @@ import (
 	"errors"
 	//"fmt"
 	"io"
+
 	"github.com/veandco/go-sdl2/sdl"
 	"github.com/veandco/go-sdl2/ttf"
 )
@@ -275,25 +276,46 @@ var (
     AllSuportedChars string = "qwertyuiop[]asdfghjkl;zxcvbnm,./1234567890-=+"
 )
 
-func main() {
-    PreRenderredChars :=make(map[rune]Cache)
-    var (
-        ScreenHeight int32  =      896
-        ScreenWidth  int32 =       1200
-        FontSize   =               52
-    )
-
+func InitGUI() {
     if err := sdl.Init(sdl.INIT_EVERYTHING); err != nil {
 		panic(err)
 	}
-	defer sdl.Quit()
 
     if err := ttf.Init(); err != nil {
         panic(err)
     }
-    defer ttf.Quit()
+}
 
-    window, err := sdl.CreateWindow("test", sdl.WINDOWPOS_UNDEFINED, sdl.WINDOWPOS_UNDEFINED,
+func EndGUI() {
+    sdl.Quit()
+    ttf.Quit()
+}
+
+func RenderOneLine(PreRenderredChars map[rune]Cache,
+                renderer *sdl.Renderer, line string,
+                X int32, Y int32, FontSize int32,
+                SpaceBetween int32) int32 {
+    var totatWidth int32 = 0
+    for _, el := range line {
+        texture := PreRenderredChars[rune(el)]
+        renderer.Copy(texture.Texture, nil, &sdl.Rect{X:totatWidth + X, Y:Y, W:texture.Width, H:FontSize})
+        totatWidth += texture.Width + SpaceBetween
+    }
+    return totatWidth
+}
+
+func main() {
+    PreRenderredChars := make(map[rune]Cache)
+    var (
+        ScreenHeight int32 =      896
+        ScreenWidth  int32 =      1200
+        FontSize           =      52
+        SpaceBetween int32 =      20
+    )
+    InitGUI()
+    defer EndGUI()
+
+    window, err := sdl.CreateWindow("Type2gether", sdl.WINDOWPOS_UNDEFINED, sdl.WINDOWPOS_UNDEFINED,
 		 ScreenWidth,ScreenHeight, sdl.WINDOW_SHOWN)
 
 	if err != nil {
@@ -314,17 +336,19 @@ func main() {
     if err != nil {
         panic(err)
     }
-
+// start position of the text
     var X int32 = 300
-    var Y int32 = 120 
+    var Y int32 = 120
+// fill cache with textures
     for _, el := range AllSuportedChars {
         fontSurface, _ := font.RenderUTF8Blended(string(el), sdl.Color{255, 0, 0, 255})
         texture, _ := renderer.CreateTextureFromSurface(fontSurface)
         PreRenderredChars[el] = Cache{texture, fontSurface.W}
     }
-    textData := "hello, world"
 
-    //texture, _ := renderer.CreateTextureFromSurface(fontSurface)
+    var textData string = "hello, world"
+
+// speed of moving =)
     var (
         dx int32 = 5
         dy int32 = 8
@@ -333,19 +357,37 @@ func main() {
 	running := true
 	for running {
 		for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
-			switch event.(type) {
+            switch t := event.(type) {
 			case *sdl.QuitEvent:
 				println("Quit")
 				running = false
 				break
-			}
-		}
+            case *sdl.TextInputEvent:
+                if len(textData) < 25 {
+                    textData += t.GetText()
+                }
+                break
+            case *sdl.KeyboardEvent:
+                if len(textData) > 0 && t.Keysym.Scancode == 42 && t.State == sdl.PRESSED {
+                    textData = textData[:len(textData) - 1]
+                }
+                //println(t.Keysym.Scancode)
+                break
+		    }
+            //println(event)
+        }
+
+        Y += dy
+        X += dx
+        renderer.Clear()
+        renderer.FillRect(nil)
+        totatWidth := RenderOneLine(PreRenderredChars, renderer, textData,X,Y,int32(FontSize),SpaceBetween)
         // movement =)
         if X + dx <= 0 {
             dx *= -1
             X += 1
         }
-        if X + int32(FontSize * len(textData)) + dx >= ScreenWidth {
+        if X + totatWidth + dx >= ScreenWidth {
             dx *= -1
             X -= 1
         }
@@ -359,19 +401,10 @@ func main() {
             Y -= 1
         }
 
-        Y += dy
-        X += dx
-        renderer.Clear()
-        renderer.FillRect(nil)
-        for i := 0; i < len(textData); i++ {
-            texture := PreRenderredChars[rune(textData[i])]
-            renderer.Copy(texture.Texture, nil, &sdl.Rect{X:int32(i*FontSize) + X, Y:Y, W:texture.Width, H:int32(FontSize)})
-        }
         renderer.Present()
         sdl.Delay(50)
 	}
     font.Close()
     fontSurface.Free()
-    //texture.Destroy()
 }
 
