@@ -13,7 +13,7 @@ type CharTexture struct {
 }
 
 var (
-    AllSupportedChars string = `abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ,./()\\-+={}[]:;'"|?&*#<>! `
+    AllSupportedChars string = " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-+*/!#$~<>{}[]();,.|?:^%&@\\'\""
 )
 
 func GUIStart() {
@@ -57,10 +57,10 @@ func NewRectangleMatrix(rows, columns int32) *RectangleMatrix {
 }
 
 type Font struct {
-    filename     string   
-    size         int      
+    filename     string
+    size         int
     color        sdl.Color
-    spaceBetween int32    
+    spaceBetween int32
     ttfFont      *ttf.Font
 }
 
@@ -111,7 +111,7 @@ func NewEngine(windowWidth, windowHeight int32,
     }
 
     err = engine.SetFont(fontFilename, fontSize, fontSpaceBetween, fontColor)
-    
+
     if err != nil {
         return nil, err
     }
@@ -151,7 +151,7 @@ func (e *Engine) SetFont(filename string, size int, spaceBetween int32, color sd
     if err != nil {
         return err
     }
-    
+
     if e.font.ttfFont != nil {
         e.font.ttfFont.Close()
     }
@@ -176,9 +176,9 @@ func (e *Engine) SetCache(supportedChars string) error {
     cache.PreRenderredCharTextures = make(map[rune]CharTexture)
 
     var (
-        mn int32 = math.MaxInt32
+        mn     int32 = math.MaxInt32
         height int32
-    )    
+    )
 
     for _, char := range supportedChars {
         fontSurface, _ := e.font.ttfFont.RenderUTF8Solid(string(char), e.font.GetColor())
@@ -189,11 +189,10 @@ func (e *Engine) SetCache(supportedChars string) error {
         }
         height = fontSurface.H
     }
-
     var (
         w, h = e.window.GetSize()
-        rows    = h / mn
-        columns = w / height
+        rows    = h / height
+        columns = w / (mn + e.font.GetSpaceBetween())
     )
 
     cache.RectangleMatrix = NewRectangleMatrix(rows, columns)
@@ -203,7 +202,7 @@ func (e *Engine) SetCache(supportedChars string) error {
 }
 
 func (e *Engine) Loop() {
-    text := "" 
+    text := ""
 	running := true
     e.renderText(text)
     for running {
@@ -215,8 +214,10 @@ func (e *Engine) Loop() {
 				break
             case *sdl.TextInputEvent:
                 pressedKey := t.GetText()
-                text += pressedKey 
-                e.renderText(text)
+                if len(text) < int(e.cache.RectangleMatrix.Columns) {
+                    text += pressedKey
+                    e.renderText(text)
+                }
                 break
             case *sdl.KeyboardEvent:
                 if len(text) > 0 && t.Keysym.Scancode == 42 && t.State == sdl.PRESSED {
@@ -232,7 +233,7 @@ func (e *Engine) Loop() {
 
 func (e *Engine) renderText(text string) {
     e.renderer.Clear()
-                
+
     var (
         X int32 = e.font.spaceBetween
         Y int32 = 0
@@ -242,7 +243,7 @@ func (e *Engine) renderText(text string) {
         e.cache.RectangleMatrix.RectangleMatrix[0][i].H = int32(e.font.GetSize())
         e.cache.RectangleMatrix.RectangleMatrix[0][i].W = e.cache.PreRenderredCharTextures[rune(c)].Width
         e.cache.RectangleMatrix.RectangleMatrix[0][i].X = X
-        e.cache.RectangleMatrix.RectangleMatrix[0][i].Y = Y 
+        e.cache.RectangleMatrix.RectangleMatrix[0][i].Y = Y
         e.renderer.Copy(e.cache.PreRenderredCharTextures[rune(c)].Texture, nil, e.cache.RectangleMatrix.RectangleMatrix[0][i])
         X += e.cache.PreRenderredCharTextures[rune(c)].Width + e.font.GetSpaceBetween()
     }
@@ -257,11 +258,11 @@ func main() {
         ScreenWidth  int32     = 1200
         FontSize     int       = 52
         SpaceBetween int32     = 10
-        FontFilename string    = "nice.ttf"
+        FontFilename string    = "dpcomic.ttf"
         FontColor    sdl.Color = sdl.Color{255, 0, 0, 255}
         WindowTitle  string    = "Type2gether"
     )
-    
+
     GUIStart()
     defer GUIStop()
 
