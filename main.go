@@ -3,6 +3,8 @@ package main
 import (
 	"bufio"
 	"errors"
+	"math"
+
 	//"fmt"
 	"io"
 
@@ -42,7 +44,7 @@ type Text struct {
     cursors []*Cursor
 }
 
-type Cache struct {
+type CharTexture struct {
     Texture *sdl.Texture
     Width   int32
 }
@@ -273,7 +275,7 @@ func CreateTextFromFile(reader *bufio.Reader) *Cursor{ // TODO: add error
 
 
 var (
-    AllSuportedChars string = "qwertyuiop[]asdfghjkl;zxcvbnm,./1234567890-=+"
+    AllSuportedChars string = `abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ,./()\\-+={}[]:;'"|?&*#<>`
 )
 
 func InitGUI() {
@@ -291,27 +293,82 @@ func EndGUI() {
     ttf.Quit()
 }
 
-func RenderOneLine(PreRenderredChars map[rune]Cache,
-                renderer *sdl.Renderer, line string,
-                X int32, Y int32, FontSize int32,
-                SpaceBetween int32) int32 {
-    var totatWidth int32 = 0
-    for _, el := range line {
-        texture := PreRenderredChars[rune(el)]
-        renderer.Copy(texture.Texture, nil, &sdl.Rect{X:totatWidth + X, Y:Y, W:texture.Width, H:FontSize})
-        totatWidth += texture.Width + SpaceBetween
-    }
-    return totatWidth
+// func RenderOneLine(PreRenderredChars map[rune]Cache,
+//                 renderer *sdl.Renderer, line string,
+//                 X int32, Y int32, FontSize int32,
+//                 SpaceBetween int32) int32 {
+//     var totatWidth int32 = 0
+//     for _, el := range line {
+//         texture := PreRenderredChars[rune(el)]
+//         renderer.Copy(texture.Texture, nil, &sdl.Rect{X:totatWidth + X, Y:Y, W:texture.Width, H:FontSize})
+//         totatWidth += texture.Width + SpaceBetween
+//     }
+//     return totatWidth
+// }
+
+type Cache struct {
+    PreRenderredCharTextures    map[rune]CharTexture
+    RectangleMatrix             *RectangleMatrix
 }
 
+func NewCache(supportedChars string, font *ttf.Font, windowWidth int32, windowHeight int32, renderer *sdl.Renderer) *Cache {
+    cache := &Cache{}
+    cache.PreRenderredCharTextures = make(map[rune]CharTexture)
+
+    var (
+        mn int32 = math.MaxInt32
+        height int32
+    )    
+
+    for _, char := range supportedChars {
+        fontSurface, _ := font.RenderUTF8Solid(string(char), sdl.Color{255, 0, 0, 255})
+        texture, _ := renderer.CreateTextureFromSurface(fontSurface)
+        cache.PreRenderredCharTextures[char] = CharTexture{texture, fontSurface.W}
+        if fontSurface.W < mn {
+            mn = fontSurface.W
+        }
+        height = fontSurface.H
+    }
+
+    var (
+        rows = windowHeight / mn
+        columns = windowWidth / height
+    )
+
+    cache.RectangleMatrix = NewRectangleMatrix(rows, columns)
+
+    return cache 
+}
+
+type RectangleMatrix struct {
+    RectangleMatrix [][]*sdl.Rect
+    Rows            int32
+    Columns         int32
+}
+
+func NewRectangleMatrix(rows, columns int32) *RectangleMatrix {
+    rectangleMatrix := &RectangleMatrix{
+        Rows: rows,
+        Columns: columns,
+    }
+    rectangleMatrix.RectangleMatrix = make([][]*sdl.Rect, rows)
+    for i := int32(0); i < rows; i++ {
+        for j := int32(0); j < columns; j++ {
+            rectangleMatrix.RectangleMatrix[i] = append(rectangleMatrix.RectangleMatrix[i], &sdl.Rect{})
+        }
+    }
+    return rectangleMatrix
+}
+
+
 func main() {
-    PreRenderredChars := make(map[rune]Cache)
     var (
         ScreenHeight int32 =      896
         ScreenWidth  int32 =      1200
-        FontSize           =      52
+        FontSize     int   =      52
         SpaceBetween int32 =      20
     )
+    
     InitGUI()
     defer EndGUI()
 
@@ -325,37 +382,24 @@ func main() {
 	defer window.Destroy()
 
     font, err := ttf.OpenFont("nice.ttf", FontSize)
+    
     if err != nil {
         panic(err)
     }
 
 
-    fontSurface, _ := font.RenderUTF8Blended("hello, world", sdl.Color{255, 0, 0, 100})
     renderer, err := sdl.CreateRenderer(window, -1, sdl.RENDERER_ACCELERATED)
 
     if err != nil {
         panic(err)
     }
-// start position of the text
-    var X int32 = 300
-    var Y int32 = 120
-// fill cache with textures
-    for _, el := range AllSuportedChars {
-        fontSurface, _ := font.RenderUTF8Blended(string(el), sdl.Color{255, 0, 0, 255})
-        texture, _ := renderer.CreateTextureFromSurface(fontSurface)
-        PreRenderredChars[el] = Cache{texture, fontSurface.W}
-    }
 
-    var textData string = "hello, world"
+    cache := NewCache(AllSuportedChars, font, ScreenWidth, ScreenHeight, renderer)
 
-// speed of moving =)
-    var (
-        dx int32 = 5
-        dy int32 = 8
-    )
-
+    text := "hello, world!" 
+     
 	running := true
-	for running {
+    for running {
 		for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
             switch t := event.(type) {
 			case *sdl.QuitEvent:
@@ -363,48 +407,36 @@ func main() {
 				running = false
 				break
             case *sdl.TextInputEvent:
-                if len(textData) < 25 {
-                    textData += t.GetText()
+                pressedKey := t.GetText()
+                text = text[:1] + pressedKey + text[2:]
+                renderer.Clear()
+                
+                var (
+                    X int32 = SpaceBetween
+                    Y int32 = 0
+                )
+
+                for i, c := range text {
+                    cache.RectangleMatrix.RectangleMatrix[0][i].H = int32(FontSize)
+                    cache.RectangleMatrix.RectangleMatrix[0][i].W = cache.PreRenderredCharTextures[rune(c)].Width
+                    cache.RectangleMatrix.RectangleMatrix[0][i].X = X
+                    cache.RectangleMatrix.RectangleMatrix[0][i].Y = Y 
+                    renderer.Copy(cache.PreRenderredCharTextures[rune(c)].Texture, nil, cache.RectangleMatrix.RectangleMatrix[0][i])
+                    X += cache.PreRenderredCharTextures[rune(c)].Width + SpaceBetween
                 }
+                renderer.Present()
                 break
             case *sdl.KeyboardEvent:
-                if len(textData) > 0 && t.Keysym.Scancode == 42 && t.State == sdl.PRESSED {
-                    textData = textData[:len(textData) - 1]
-                }
+                // if len(textData) > 0 && t.Keysym.Scancode == 42 && t.State == sdl.PRESSED {
+                //     textData = textData[:len(textData) - 1]
+                // }
                 //println(t.Keysym.Scancode)
                 break
 		    }
             //println(event)
         }
-
-        Y += dy
-        X += dx
-        renderer.Clear()
-        renderer.FillRect(nil)
-        totatWidth := RenderOneLine(PreRenderredChars, renderer, textData,X,Y,int32(FontSize),SpaceBetween)
-        // movement =)
-        if X + dx <= 0 {
-            dx *= -1
-            X += 1
-        }
-        if X + totatWidth + dx >= ScreenWidth {
-            dx *= -1
-            X -= 1
-        }
-
-        if Y <= 0{
-            dy *= -1
-            Y += 1
-        }
-        if Y + int32(FontSize)  >= ScreenHeight {
-            dy *= -1
-            Y -= 1
-        }
-
-        renderer.Present()
         sdl.Delay(50)
 	}
     font.Close()
-    fontSurface.Free()
 }
 
