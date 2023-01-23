@@ -258,7 +258,7 @@ func main() {
         ScreenWidth  int32     = 1200
         FontSize     int       = 52
         SpaceBetween int32     = 10
-        FontFilename string    = "dpcomic.ttf"
+        FontFilename string    = "nice.ttf"
         FontColor    sdl.Color = sdl.Color{255, 0, 0, 255}
         WindowTitle  string    = "Type2gether"
     )
