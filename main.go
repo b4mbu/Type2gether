@@ -3,6 +3,7 @@ package main
 import (
 	"math"
     "errors"
+    //    "Type2gether/textmanager"
 	"github.com/veandco/go-sdl2/sdl"
 	"github.com/veandco/go-sdl2/ttf"
 )
@@ -42,7 +43,7 @@ type RectangleMatrix struct {
     Columns         int32
 }
 
-func NewRectangleMatrix(rows, columns int32) *RectangleMatrix {
+func NewRectangleMatrix(rows, columns int32, fontSize int) *RectangleMatrix {
     rectangleMatrix := &RectangleMatrix{
         Rows: rows,
         Columns: columns,
@@ -50,7 +51,7 @@ func NewRectangleMatrix(rows, columns int32) *RectangleMatrix {
     rectangleMatrix.RectangleMatrix = make([][]*sdl.Rect, rows)
     for i := int32(0); i < rows; i++ {
         for j := int32(0); j < columns; j++ {
-            rectangleMatrix.RectangleMatrix[i] = append(rectangleMatrix.RectangleMatrix[i], &sdl.Rect{})
+            rectangleMatrix.RectangleMatrix[i] = append(rectangleMatrix.RectangleMatrix[i], &sdl.Rect{Y: i * int32(fontSize)})
         }
     }
     return rectangleMatrix
@@ -86,6 +87,20 @@ type Engine struct {
     window      *sdl.Window
     font        Font
     text        string
+    cursor      *Cursor
+}
+
+type Cursor struct {
+    row int32
+    col int32
+}
+
+func (e *Engine) RenderCursor() {
+    var height int32 = int32(e.font.GetSize())
+    e.renderer.SetDrawColor(255, 255, 255, 255)
+    println(e.cache.RectangleMatrix.RectangleMatrix[e.cursor.row][e.cursor.col].X)
+    e.renderer.FillRect(&sdl.Rect{X: e.cache.RectangleMatrix.RectangleMatrix[e.cursor.row][e.cursor.col].X + e.cache.RectangleMatrix.RectangleMatrix[e.cursor.row][e.cursor.col].W , Y: e.cache.RectangleMatrix.RectangleMatrix[e.cursor.row][e.cursor.col].Y, W: 5, H: height})
+    e.renderer.SetDrawColor(0, 0, 0, 255)
 }
 
 func (e *Engine) SetText(str string) {
@@ -113,6 +128,7 @@ func NewEngine(windowWidth, windowHeight int32,
     engine := &Engine{
         renderer: renderer,
         window: window,
+        cursor: &Cursor{0, 0},
     }
 
     err = engine.SetFont(fontFilename, fontSize, fontSpaceBetween, fontColor)
@@ -200,7 +216,7 @@ func (e *Engine) SetCache(supportedChars string) error {
         columns = w / (mn + e.font.GetSpaceBetween())
     )
 
-    cache.RectangleMatrix = NewRectangleMatrix(rows, columns)
+    cache.RectangleMatrix = NewRectangleMatrix(rows, columns, e.font.GetSize())
     e.cache = cache
 
     return nil
@@ -209,6 +225,7 @@ func (e *Engine) SetCache(supportedChars string) error {
 func (e *Engine) Loop() {
 	running := true
     e.renderText()
+    var fl int32 = 0
     for running {
 		for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
             switch t := event.(type) {
@@ -221,16 +238,37 @@ func (e *Engine) Loop() {
                 // TODO FIX BUGGGGGG LEN(CURRENT LINE) < ....Columns
                 if len(e.text) < int(e.cache.RectangleMatrix.Columns) {
                     e.text += pressedKey
-                    e.renderText()
+                    if fl == 0 {
+                        fl = 1
+                        e.renderText()
+                    }else{
+                        e.cursor.col += 1
+                        e.renderText()
+                    }
+                    //e.cursor.col += 1
+                    //e.renderText()
                 }
                 break
             case *sdl.KeyboardEvent:
                 if len(e.text) > 0 && t.Keysym.Scancode == sdl.SCANCODE_BACKSPACE && t.State == sdl.PRESSED {
                     e.text = e.text[:len(e.text) - 1]
+                    e.cursor.col -= 1
+                   if e.cursor.col == -1 {
+                       /* if e.cursor.row != 0 {
+                            e.cursor.row -= 1
+                            e.cursor.col = 0
+                        }*/
+                        e.cursor.col = 0
+                    }
+                    e.renderText()
                 } else if t.Keysym.Scancode == sdl.SCANCODE_RETURN && t.State == sdl.PRESSED {
                     e.text = e.text + "\n"
+                    //e.renderText()
+                    e.cursor.col = 0
+                    fl = 0
+                    e.cursor.row += 1
+                    e.renderText()
                 }
-                e.renderText()
                 break
 		    }
         }
@@ -257,12 +295,14 @@ func (e *Engine) renderText() {
         X += e.cache.PreRenderredCharTextures[rune(c)].Width + e.font.GetSpaceBetween()
         col++
         if c == '\n'  {
-            Y += int32(e.font.GetSize()) + e.font.GetSpaceBetween()
+            Y += int32(e.font.GetSize())
             X = e.font.GetSpaceBetween()
             row++
             col = 0
         }
     }
+    println(e.cursor.col, e.cursor.row)
+    e.RenderCursor()
     e.renderer.Present()
 
 }
@@ -287,8 +327,8 @@ func main() {
     if err != nil {
         panic(err)
     }
-
-    engine.SetText("kurovaodjalfkasl\nfjadlskfasdfk\nkfadjf;askdfj")
+    
+    engine.SetText("")
     engine.Loop()
 }
 
