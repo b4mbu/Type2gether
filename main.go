@@ -54,7 +54,7 @@ func NewRectangleMatrix(rows, columns int32) *RectangleMatrix {
         }
     }
     return rectangleMatrix
-}
+
 
 type Font struct {
     filename     string
@@ -81,10 +81,15 @@ func (f *Font) GetSpaceBetween() int32 {
 }
 
 type Engine struct {
-    cache  *Cache
-    renderer *sdl.Renderer
-    window *sdl.Window
-    font   Font
+    cache       *Cache
+    renderer    *sdl.Renderer
+    window      *sdl.Window
+    font        Font
+    text        string
+}
+
+func (e *Engine) SetText(str string) {
+    e.text = str
 }
 
 func NewEngine(windowWidth, windowHeight int32,
@@ -202,9 +207,8 @@ func (e *Engine) SetCache(supportedChars string) error {
 }
 
 func (e *Engine) Loop() {
-    text := ""
 	running := true
-    e.renderText(text)
+    e.renderText()
     for running {
 		for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
             switch t := event.(type) {
@@ -214,16 +218,18 @@ func (e *Engine) Loop() {
 				break
             case *sdl.TextInputEvent:
                 pressedKey := t.GetText()
-                if len(text) < int(e.cache.RectangleMatrix.Columns) {
-                    text += pressedKey
-                    e.renderText(text)
+                if len(e.text) < int(e.cache.RectangleMatrix.Columns) {
+                    e.text += pressedKey
+                    e.renderText()
                 }
                 break
             case *sdl.KeyboardEvent:
-                if len(text) > 0 && t.Keysym.Scancode == 42 && t.State == sdl.PRESSED {
-                     text = text[:len(text) - 1]
+                if len(e.text) > 0 && t.Keysym.Scancode == sdl.SCANCODE_BACKSPACE && t.State == sdl.PRESSED {
+                    e.text = e.text[:len(e.text) - 1]
+                } else if t.Keysym.Scancode == sdl.SCANCODE_RETURN && t.State == sdl.PRESSED {
+                    e.text = e.text + "\n"
                 }
-                e.renderText(text)
+                e.renderText()
                 break
 		    }
         }
@@ -231,21 +237,30 @@ func (e *Engine) Loop() {
 	}
 }
 
-func (e *Engine) renderText(text string) {
+func (e *Engine) renderText() {
     e.renderer.Clear()
 
     var (
-        X int32 = e.font.spaceBetween
-        Y int32 = 0
+        X   int32 = e.font.GetSpaceBetween()
+        Y   int32 = 0
+        row int32 = 0
+        col int32 = 0
     )
 
-    for i, c := range text {
-        e.cache.RectangleMatrix.RectangleMatrix[0][i].H = int32(e.font.GetSize())
-        e.cache.RectangleMatrix.RectangleMatrix[0][i].W = e.cache.PreRenderredCharTextures[rune(c)].Width
-        e.cache.RectangleMatrix.RectangleMatrix[0][i].X = X
-        e.cache.RectangleMatrix.RectangleMatrix[0][i].Y = Y
-        e.renderer.Copy(e.cache.PreRenderredCharTextures[rune(c)].Texture, nil, e.cache.RectangleMatrix.RectangleMatrix[0][i])
+    for _, c := range e.text {
+        e.cache.RectangleMatrix.RectangleMatrix[row][col].H = int32(e.font.GetSize())
+        e.cache.RectangleMatrix.RectangleMatrix[row][col].W = e.cache.PreRenderredCharTextures[rune(c)].Width
+        e.cache.RectangleMatrix.RectangleMatrix[row][col].X = X
+        e.cache.RectangleMatrix.RectangleMatrix[row][col].Y = Y
+        e.renderer.Copy(e.cache.PreRenderredCharTextures[rune(c)].Texture, nil, e.cache.RectangleMatrix.RectangleMatrix[row][col])
         X += e.cache.PreRenderredCharTextures[rune(c)].Width + e.font.GetSpaceBetween()
+        col++
+        if c == '\n'  {
+            Y += int32(e.font.GetSize()) + e.font.GetSpaceBetween()
+            X = e.font.GetSpaceBetween()
+            row++
+            col = 0
+        }
     }
     e.renderer.Present()
 
@@ -272,6 +287,7 @@ func main() {
         panic(err)
     }
 
+    engine.SetText("kurovaodjalfkasl\nfjadlskfasdfk\nkfadjf;askdfj")
     engine.Loop()
 }
-
+    
