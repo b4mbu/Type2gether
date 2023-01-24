@@ -1,4 +1,4 @@
-module main
+module Type2gether
 
 go 1.18
 
