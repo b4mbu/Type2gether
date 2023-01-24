@@ -11,46 +11,22 @@ const (
     endl = '\n'
 )
 
-type Char struct {
-    value  rune
-    next  *Char
-    prev  *Char
-}
-
 type Line struct {
-    value *Char
-    next  *Line
-    prev  *Line
-    size   uint8
+    list.List[rune]
 }
 
 type Cursor struct {
-    linePos *Line
-    charPos *Char
-    head    *Line
+    linePos *list.Node[*Line]
+    charPos *list.Node[rune]
     id      int64
-    // Xcoord
-    // Tcoord
+    row     int32
+    col     int32
 }
 
 type Text struct {
-    head  *Line
-    size  uint32
-    cursors []*Cursor
-}
-
-
-
-func CreateChar(value rune) *Char {
-    char := new(Char)
-    char.value = value
-
-    return char
-}
-
-func CreateLine() *Line {
-    line := new(Line)
-    return line
+    data      list.List[*Line]
+    size      uint32
+    cursors   []*Cursor
 }
 
 func CreateCursor() *Cursor {
@@ -58,7 +34,20 @@ func CreateCursor() *Cursor {
     return c
 }
 
+func (t *Text) InsertCharBefore (cursorId int64, value rune) error {
+    cur := t.cursors[cursorId]
+    if cur.linePos == nil {
+        t.data.InsertBefore(nil, nil)
+    }
+
+
+}
+
+
+
+/*
 func (c *Cursor) SetLine (l *Line) {
+    
     c.linePos = l
 }
 
@@ -277,4 +266,4 @@ func (t *Text) GetTextAsLine() string {
     }
     return res
 }
-
+*/
