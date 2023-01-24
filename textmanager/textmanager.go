@@ -1,5 +1,12 @@
 package textmanager
 
+import (
+    "io"
+    "bufio"
+    "errors"
+    "Type2gether/list"
+)
+
 const (
     endl = '\n'
 )
@@ -256,3 +263,18 @@ func CreateTextFromFile(reader *bufio.Reader) *Cursor{ // TODO: add error
     }
     return cursor
 }
+
+func (t *Text) GetTextAsLine() string {
+    res := ""
+    linePtr := t.head
+    for linePtr != nil {
+        charPtr := linePtr.value
+        for charPtr != nil {
+            res += string(charPtr.value)
+            charPtr = charPtr.next
+        }
+        linePtr = linePtr.next
+    }
+    return res
+}
+

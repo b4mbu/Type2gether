@@ -54,7 +54,7 @@ func NewRectangleMatrix(rows, columns int32) *RectangleMatrix {
         }
     }
     return rectangleMatrix
-
+}
 
 type Font struct {
     filename     string
@@ -218,6 +218,7 @@ func (e *Engine) Loop() {
 				break
             case *sdl.TextInputEvent:
                 pressedKey := t.GetText()
+                // TODO FIX BUGGGGGG LEN(CURRENT LINE) < ....Columns
                 if len(e.text) < int(e.cache.RectangleMatrix.Columns) {
                     e.text += pressedKey
                     e.renderText()
@@ -290,4 +291,4 @@ func main() {
     engine.SetText("kurovaodjalfkasl\nfjadlskfasdfk\nkfadjf;askdfj")
     engine.Loop()
 }
-    
+
