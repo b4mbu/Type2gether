@@ -13,7 +13,7 @@ type CharTexture struct {
 }
 
 var (
-    AllSupportedChars string = " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-+*/!#$~<>{}[]();,.|?:^%&@\\'\""
+    AllSupportedChars string = " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-+*/!#$~<>{}[]();,.|?:^%&@=_№`\\'\""
 )
 
 func GUIStart() {
@@ -54,7 +54,7 @@ func NewRectangleMatrix(rows, columns int32) *RectangleMatrix {
         }
     }
     return rectangleMatrix
-
+}
 
 type Font struct {
     filename     string
