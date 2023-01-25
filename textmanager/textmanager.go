@@ -1,9 +1,6 @@
 package textmanager
 
 import (
-    "io"
-    "bufio"
-    "errors"
     "Type2gether/list"
 )
 
@@ -16,33 +13,78 @@ type Line struct {
 }
 
 type Cursor struct {
-    linePos *list.Node[*Line]
-    charPos *list.Node[rune]
+    lineIter *list.Node[*Line]
+    charIter *list.Node[rune]
     id      int64
     row     int32
     col     int32
 }
 
 type Text struct {
-    data      list.List[*Line]
+    list.List[*Line]
     size      uint32
     cursors   []*Cursor
 }
 
-func CreateCursor() *Cursor {
+func NewCursor() *Cursor {
     c := new(Cursor)
     return c
 }
 
-func (t *Text) InsertCharBefore (cursorId int64, value rune) error {
+func (t *Text) InsertCharBefore(cursorId int64, value rune) error {
     cur := t.cursors[cursorId]
-    if cur.linePos == nil {
-        t.data.InsertBefore(nil, nil)
+
+    if cur.lineIter == nil {
+        t.InsertLineAfter(0)
+
+        line := t.GetHead().GetValue()
+        err := line.InsertBefore(value, nil)
+
+        if err != nil {
+            return err
+        }
+
+        return nil
     }
 
+    if cur.charIter == nil {
+        err := cur.lineIter.GetValue().InsertBefore(value, nil)
 
+        if err != nil {
+            return err
+        }
+
+        return nil
+    }
+
+    err := cur.lineIter.GetValue().InsertBefore(value, cur.charIter)
+
+    if err != nil {
+        return err
+    }
+
+    return nil
 }
 
+func (t *Text) InsertLineAfter(cursorId int64) error {
+    cur := t.cursors[cursorId]
+    line := &Line{}
+
+    err := t.InsertAfter(line, cur.lineIter)
+
+    if err != nil {
+        return err
+    }
+    
+    if cur.lineIter != nil {
+        cur.lineIter = cur.lineIter.GetNext()
+    } else {
+        cur.lineIter = t.GetHead()
+    }
+    cur.charIter = nil
+
+    return nil
+}
 
 
 /*

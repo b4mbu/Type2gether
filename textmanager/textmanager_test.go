@@ -1,6 +1,9 @@
 package textmanager
 
-import "testing"
+import (
+    "testing"
+    "fmt"
+)
 
 func TestText(t *testing.T) {
     cursor := NewCursor()
@@ -8,24 +11,33 @@ func TestText(t *testing.T) {
         cursors: []*Cursor{cursor},
     }
 
-    hello := "Hello, Wolrd!"
+    hello := "Hello, Wolrd!~Privet, Mir~~Cu, Mir"
+    // hello := "Hello, World!"
 
     for _, c := range hello {
-        err := text.InsertCharBefore(0, c)
-        if err != nil {
-            t.Error(err)
+        if c == '~' {
+            println("fff")
+            err := text.InsertLineAfter(0)
+            
+            if err != nil {
+                t.Error(err)
+            }
+        } else {
+            err := text.InsertCharBefore(0, c)
+            if err != nil {
+                t.Error(err)
+            }
         }
     }
 
-    ptr := text.data.GetHead()
-    println("fff")
+    ptr := text.GetHead()
     for ptr != nil {
         ptr1 := ptr.GetValue().GetHead()
         for ptr1 != nil {
-            println(ptr1.GetValue())
+            fmt.Print(string(ptr1.GetValue()))
             ptr1 = ptr1.GetNext()
         }
-
+        fmt.Print("±")
         ptr = ptr.GetNext()
     }
 }
