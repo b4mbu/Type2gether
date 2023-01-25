@@ -3,6 +3,7 @@ package list
 
 import (
     //"fmt"
+    "errors"
 )
 
 type List[T any] struct {
@@ -28,6 +29,10 @@ func (n *Node[T]) GetPrev() *Node[T] {
     return n.prev
 }
 
+func (n *Node[T]) GetValue() T {
+    return n.value
+}
+
 func (l *List[T]) PushBack(value T) {
     if l.head == nil {
         l.head = NewNode(value)
@@ -44,14 +49,20 @@ func (l *List[T]) PushBack(value T) {
     l.length++
 }
 
-func (l *List[T]) InsertBefore(value T, node *Node[T]) {
+func (l *List[T]) InsertBefore(value T, node *Node[T]) error {
+    if l.head == nil && node == nil {
+        l.head = NewNode[T](value)
+        l.length = 1
+        return nil
+    }
+
     if l.head == nil {
-        return
+        return errors.New("head is nil but node is not nil")
     }
 
     if node == nil {
         l.PushBack(value)
-        return
+        return nil
     }
 
     ptr := l.head
@@ -65,6 +76,7 @@ func (l *List[T]) InsertBefore(value T, node *Node[T]) {
     newNode.next = node
     node.prev = newNode
     l.length++
+    return nil
 }
 
 func (l *List[T]) Remove(node *Node[T]) {
