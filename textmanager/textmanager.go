@@ -9,27 +9,32 @@ const (
     endl = '\n'
 )
 
-type Line struct {
-    list list.List[rune]
-}
-//Cursor указывает на текущий элемент, а не на злемент за ним
+// type Line struct {
+//     list list.List[rune]
+// }
+// Cursor указывает на текущий элемент, а не на злемент за ним
+// Line теперь представляем не как наследуемую структуру от list.List[rune], а как list.List[rune] сам по себе. 
+// чтобы создать новую строку, надо использовать line := new(list.List[rune])
+// все вызовы остаются, как прежде
+
+
 type Cursor struct {
-    LineIter *list.Node[*Line]
+    LineIter *list.Node[*list.List[rune]]
     CharIter *list.Node[rune]
-    Id      int64
-    Row     int32
-    Col     int32
+    Id       int64
+    Row      int32
+    Col      int32
 }
 
 type Text struct {
-    list.List[*Line]
+    list.List[*list.List[rune]]
     // скорее всего не нужен тк в List есть аттрибут lenght /  size      int64
     Cursors   []*Cursor
 }
 
 func NewText() *Text{
     t := new(Text)
-    t.PushBack(new(Line))
+    t.PushBack(new(list.List[rune]))
     return t
 }
 
@@ -93,8 +98,8 @@ func (t *Text) InsertCharAfter(cursorId int64, value rune) error {
     // эта штука не должна вызываться никогда
     if cur.LineIter == nil {
         println("Мужики, работяги, всё плохо. Юра, мы всё прое****, это условие не должно выполняться")
-        line := new(Line)
-        err := line.list.PushBack(value)
+        line := new(list.List[rune])
+        err := line.PushBack(value)
 
         if err != nil {
             return err
@@ -107,7 +112,7 @@ func (t *Text) InsertCharAfter(cursorId int64, value rune) error {
         }
 
         cur.LineIter = t.GetHead()
-        cur.CharIter = line.list.GetHead()
+        cur.CharIter = line.GetHead()
         cur.Col = 0 
         cur.Row = 0
 
@@ -115,18 +120,18 @@ func (t *Text) InsertCharAfter(cursorId int64, value rune) error {
     }
 
     if cur.CharIter == nil {
-        err := cur.LineIter.GetValue().list.PushBack(value)
+        err := cur.LineIter.GetValue().PushBack(value)
 
         if err != nil {
             return err
         }
 
-        cur.CharIter = cur.LineIter.GetValue().list.GetHead()
+        cur.CharIter = cur.LineIter.GetValue().GetHead()
         cur.Col = 0
         return nil
     }
     
-    err := cur.LineIter.GetValue().list.InsertAfter(value, cur.CharIter)
+    err := cur.LineIter.GetValue().InsertAfter(value, cur.CharIter)
 
     if err != nil {
         return err 
@@ -145,7 +150,7 @@ func (t *Text) InsertLineAfter(cursorId int64) error {
         return errors.New("Мы не должны заходить в этот if")
     }
     
-    line := new(Line)
+    line := new(list.List[rune])
 
     if cur.CharIter == nil {
         err := t.InsertAfter(line, cur.LineIter)
@@ -155,13 +160,13 @@ func (t *Text) InsertLineAfter(cursorId int64) error {
         }
 
         cur.LineIter = cur.LineIter.GetNext()
-        cur.CharIter = cur.LineIter.GetValue().list.GetHead()
+        cur.CharIter = cur.LineIter.GetValue().GetHead()
         cur.Row++
         cur.Col = -1
         return nil
     }
     
-    lst, err := cur.LineIter.GetValue().list.Split(cur.CharIter)
+    lst, err := cur.LineIter.GetValue().Split(cur.CharIter)
     
     if err != nil {
         return err
@@ -170,7 +175,7 @@ func (t *Text) InsertLineAfter(cursorId int64) error {
     node := &list.Node[*list.List[rune]]{}
     node.SetValue(lst)
     
-    node.SetPrev(cur.LineIter.list)
+    node.SetPrev(cur.LineIter)
     node.SetNext(cur.LineIter.GetNext())
     if cur.LineIter.GetNext() == nil {
         cur.LineIter.GetNext().SetPrev(node)
