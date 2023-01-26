@@ -162,7 +162,7 @@ func (t *Text) InsertLineAfter(cursorId int64) error {
         cur.LineIter = cur.LineIter.GetNext()
         cur.CharIter = cur.LineIter.GetValue().GetHead()
         cur.Row++
-        cur.Col = -1
+        cur.Col--
         return nil
     }
     
