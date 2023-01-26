@@ -2,6 +2,7 @@ package textmanager
 
 import (
     "Type2gether/list"
+    "errors"
 )
 
 const (
@@ -9,90 +10,238 @@ const (
 )
 
 type Line struct {
-    list.List[rune]
+    list list.List[rune]
 }
-
+//Cursor указывает на текущий элемент, а не на злемент за ним
 type Cursor struct {
-    lineIter *list.Node[*Line]
-    charIter *list.Node[rune]
-    id      int64
-    row     int32
-    col     int32
+    LineIter *list.Node[*Line]
+    CharIter *list.Node[rune]
+    Id      int64
+    Row     int32
+    Col     int32
 }
 
 type Text struct {
     list.List[*Line]
-    size      uint32
-    cursors   []*Cursor
+    // скорее всего не нужен тк в List есть аттрибут lenght /  size      int64
+    Cursors   []*Cursor
 }
 
-func NewCursor() *Cursor {
+func NewText() *Text{
+    t := new(Text)
+    t.PushBack(new(Line))
+    return t
+}
+
+//TODO написать присвоение id для курсора
+//TODO на данном этапе при создании NewCursor просто всегда будем 0 в него передавать, когда будем писать серверную часть нужно будет определиться с созданием Id
+func NewCursor(Id int64) *Cursor {
     c := new(Cursor)
+    c.Row = 0
+    c.Col = -1
+    c.Id = Id
     return c
 }
 
-func (t *Text) InsertCharBefore(cursorId int64, value rune) error {
-    cur := t.cursors[cursorId]
+//TODO сделать красиво
+//сделать откат строки, и ячейки если у нас не вставилась буква
+// строку откатываем, только если мы одновременно создаём строку и ячейку
+// иначе откатываем только ячейку
+/*func (t *Text) InsertCharBefore(cursorId int64, value rune) error {
+    cur := t.Cursors[cursorId]
 
-    if cur.lineIter == nil {
-        t.InsertLineAfter(0)
+    if cur.LineIter == nil {
+        println("1111111111111111111111111111")
+        err := t.InsertLineAfter(cursorId)
 
+        if err != nil {
+            return err
+        }
+        
         line := t.GetHead().GetValue()
-        err := line.InsertBefore(value, nil)
+        err = line.InsertBefore(value, nil)
+        if err != nil {
+            return err
+        }
+        cur.Col++
+        return nil
+    }
+
+    if cur.CharIter == nil {
+        println("22222222222222222222222222222222222222")
+        err := cur.LineIter.GetValue().InsertBefore(value, nil)
 
         if err != nil {
             return err
         }
-
+        cur.Col++
         return nil
     }
+    println("33333333333333333333333333333333333333")
 
-    if cur.charIter == nil {
-        err := cur.lineIter.GetValue().InsertBefore(value, nil)
-
-        if err != nil {
-            return err
-        }
-
-        return nil
-    }
-
-    err := cur.lineIter.GetValue().InsertBefore(value, cur.charIter)
+    err := cur.LineIter.GetValue().InsertBefore(value, cur.CharIter)
 
     if err != nil {
         return err
     }
+    cur.Col++
+    return nil
+}*/
 
+func (t *Text) InsertCharAfter(cursorId int64, value rune) error {
+    cur := t.Cursors[cursorId]
+    // эта штука не должна вызываться никогда
+    if cur.LineIter == nil {
+        println("Мужики, работяги, всё плохо. Юра, мы всё прое****, это условие не должно выполняться")
+        line := new(Line)
+        err := line.list.PushBack(value)
+
+        if err != nil {
+            return err
+        }
+
+        err = t.PushBack(line)
+
+        if err != nil {
+            return err
+        }
+
+        cur.LineIter = t.GetHead()
+        cur.CharIter = line.list.GetHead()
+        cur.Col = 0 
+        cur.Row = 0
+
+        return nil
+    }
+
+    if cur.CharIter == nil {
+        err := cur.LineIter.GetValue().list.PushBack(value)
+
+        if err != nil {
+            return err
+        }
+
+        cur.CharIter = cur.LineIter.GetValue().list.GetHead()
+        cur.Col = 0
+        return nil
+    }
+    
+    err := cur.LineIter.GetValue().list.InsertAfter(value, cur.CharIter)
+
+    if err != nil {
+        return err 
+    }
+
+    cur.CharIter = cur.CharIter.GetNext()
+    cur.Col++
     return nil
 }
 
 func (t *Text) InsertLineAfter(cursorId int64) error {
-    cur := t.cursors[cursorId]
-    line := &Line{}
+    cur := t.Cursors[cursorId]
 
-    err := t.InsertAfter(line, cur.lineIter)
+    if cur.LineIter == nil {
+        println("Мы не должны заходить в этот if ")
+        return errors.New("Мы не должны заходить в этот if")
+    }
+    
+    line := new(Line)
 
+    if cur.CharIter == nil {
+        err := t.InsertAfter(line, cur.LineIter)
+
+        if err != nil {
+            return err    
+        }
+
+        cur.LineIter = cur.LineIter.GetNext()
+        cur.CharIter = cur.LineIter.GetValue().list.GetHead()
+        cur.Row++
+        cur.Col = -1
+        return nil
+    }
+    
+    lst, err := cur.LineIter.GetValue().list.Split(cur.CharIter)
+    
     if err != nil {
         return err
     }
-    
-    if cur.lineIter != nil {
-        cur.lineIter = cur.lineIter.GetNext()
-    } else {
-        cur.lineIter = t.GetHead()
-    }
-    cur.charIter = nil
 
+    node := &list.Node[*list.List[rune]]{}
+    node.SetValue(lst)
+    
+    node.SetPrev(cur.LineIter.list)
+    node.SetNext(cur.LineIter.GetNext())
+    if cur.LineIter.GetNext() == nil {
+        cur.LineIter.GetNext().SetPrev(node)
+    }
+    cur.LineIter.SetNext(node)
+    cur.LineIter = node
+    //cur.CharIter = node.GetValue().GetHead() если это не работает, то Егор не прав но, только в этом моменте
+    cur.Row++
+    cur.Col = 0
     return nil
 }
 
+//TODO cur.CharIter == nil не значит, что строка пустая || Нужно проверить везде в коде это 
+func (t *Text) RemoveCharBefore(cursorId int64) error {
+    cur := t.Cursors[cursorId]
+    
+    if cur.LineIter == nil {
+        println("Press 'F', пацан к успеху шёл, Какой успех, раздался смех")
+        return nil
+    }
+    
+    if cur.CharIter == nil {
+        if cur.LineIter.GetPrev() == nil {
+            return nil
+        }
+        prev := cur.LineIter.GetPrev()
+        err := t.MergeLines(cursorId)
+        if err != nil {
+            return err
+        }
+        cur.LineIter = prev
+        cur.CharIter = cur.LineIter.GetValue().GetTail()
+        return nil
+    }
+    
+    return nil
+}
 
+func (t *Text) MergeLines(cursorId int64) error {
+    cur := t.Cursors[cursorId]
+    if cur.LineIter.GetPrev() == nil {
+        return errors.New("Нет предыдущей строки")
+    }
+    err := cur.LineIter.GetPrev().GetValue().Merge(cur.LineIter.GetValue())
+    if err != nil {
+        return err
+    }
+    return t.Remove(cur.LineIter)
+}
+
+func (t *Text) GetString() string {
+    str := ""
+    iter := t.GetHead()
+    for iter != nil {
+        char_iter := iter.GetValue().GetHead()
+        for char_iter != nil {
+            str += string(char_iter.GetValue())
+            char_iter = char_iter.GetNext()
+        }
+        str += "\n"
+        iter = iter.GetNext()
+    }
+    return str
+}
 /*
 func (c *Cursor) SetLine (l *Line) {
     
     c.linePos = l
 }
-
+f cur.LineIter != nil {
+ 92         cur.LineIter 
 func (c *Cursor) InsertCharBefore (value rune) error {
     c.InsertCharAfter(value)
     return c.Right()
