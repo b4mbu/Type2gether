@@ -90,6 +90,7 @@ type Engine struct {
 }
 
 // TODO add cursor.Color
+// TODO когда cur.Col == -1 и тогда нужно отрисовывать перед первой буквой курсор
 func (e *Engine) RenderCursor() {
     var height int32 = e.font.GetSize()
     e.renderer.SetDrawColor(255, 255, 255, 255)
@@ -264,6 +265,8 @@ func (e *Engine) Loop() {
                     break
                 }
 
+                println("Scancode: ", t.Keysym.Scancode)
+
                 if t.Keysym.Scancode == sdl.SCANCODE_BACKSPACE {
                     e.EraseChar(DEBUG_CUR_ID)
                 } else if t.Keysym.Scancode == sdl.SCANCODE_RETURN {
@@ -271,6 +274,15 @@ func (e *Engine) Loop() {
                 } else if t.Keysym.Scancode == sdl.SCANCODE_TAB {
                     // TODO 4 -> SPACE IN ONE TAB
                     e.InsertChar('\t', DEBUG_CUR_ID)
+                } else if t.Keysym.Scancode == 80 {
+                    println("LEFT HERE")
+                    e.MoveCursor("left", DEBUG_CUR_ID)
+                } else if t.Keysym.Scancode == 79 {
+                    e.MoveCursor("right", DEBUG_CUR_ID)
+                } else if t.Keysym.Scancode == 82 {
+                    e.MoveCursor("up", DEBUG_CUR_ID)
+                } else if t.Keysym.Scancode == 81 {
+                    e.MoveCursor("down", DEBUG_CUR_ID)
                 }
 
                 e.renderText()
@@ -279,6 +291,19 @@ func (e *Engine) Loop() {
         }
         sdl.Delay(50)
 	}
+}
+
+func (e *Engine) MoveCursor (direction string, cursorId int64) {
+    cur := e.text.Cursors[cursorId]
+    if direction == "left" {
+        cur.MoveLeft()
+    } else if direction == "right" {
+        cur.MoveRight()
+    } else if direction == "up" {
+        cur.MoveUp()
+    } else if direction == "down" {
+        cur.MoveDown()
+    }
 }
 
 // TODO add flag "Back space" or "Delete" and cursor ID
@@ -376,4 +401,3 @@ func main() {
     //engine.SetText("")
     engine.Loop()
 }
-
