@@ -183,6 +183,16 @@ func (t *Text) InsertLineAfter(cursorId int64) error {
 // TODO may be not empty
     if cur.CharIter == nil {
         line := new(list.List[rune])
+        if cur.LineIter.GetValue().GetTail() != nil {
+            err := t.InsertBefore(line, cur.LineIter)
+
+            if err != nil {
+                return err
+            }
+            cur.Row++
+            cur.Col = -1
+            return nil
+        }
         err := t.InsertAfter(line, cur.LineIter)
 
         if err != nil {
@@ -296,6 +306,84 @@ func (t *Text) GetString() string {
     println("Original str: ", str)
     return str
 }
+
+func (cur *Cursor) MoveLeft() {
+    if cur.CharIter == nil {
+        if cur.LineIter.GetPrev() == nil {
+            return
+        }
+
+        cur.LineIter = cur.LineIter.GetPrev()
+        cur.CharIter = cur.LineIter.GetValue().GetTail()
+        cur.Row--
+        cur.Col = cur.LineIter.GetValue().Length() - 1
+        return
+    }
+
+    cur.CharIter = cur.CharIter.GetPrev()
+    cur.Col--
+}
+
+func (cur *Cursor) MoveRight() {
+    if cur.CharIter == nil {
+        if cur.LineIter.GetValue().GetHead() == nil {
+            if cur.LineIter.GetNext() == nil {
+                return
+            }
+            cur.LineIter = cur.LineIter.GetNext()
+            cur.CharIter = nil
+            cur.Row++
+            cur.Col = -1
+            return
+        }
+
+        cur.CharIter = cur.LineIter.GetValue().GetHead()
+        cur.Col = 0
+        return
+    }
+
+    if cur.CharIter == cur.LineIter.GetValue().GetTail() {
+        if cur.LineIter.GetNext() == nil {
+            return
+        }
+
+        cur.LineIter = cur.LineIter.GetNext()
+        cur.CharIter = nil
+        cur.Row++
+        cur.Col = -1
+        return
+    }
+
+    cur.CharIter = cur.CharIter.GetNext()
+    cur.Col++
+}
+
+func (cur *Cursor) MoveUp () {
+    if cur.LineIter.GetPrev() == nil {
+        return
+    }
+    
+    index := cur.LineIter.GetValue().Index(cur.CharIter)
+    cur.CharIter = cur.LineIter.GetPrev().GetValue().GetNodeByIndex(index)
+    cur.LineIter = cur.LineIter.GetPrev()
+    cur.Row--
+    cur.Col = cur.LineIter.GetValue().Index(cur.CharIter)
+}
+
+func (cur *Cursor) MoveDown() {
+    if cur.LineIter.GetNext() == nil {
+        return
+    }
+
+    index := cur.LineIter.GetValue().Index(cur.CharIter)
+    cur.CharIter = cur.LineIter.GetNext().GetValue().GetNodeByIndex(index)
+    cur.LineIter = cur.LineIter.GetNext()
+    cur.Row++
+    cur.Col = cur.LineIter.GetValue().Index(cur.CharIter)
+}
+
+//LineIter -> Node (List[rune] -> head, tail, value)
+
 /*
 func (c *Cursor) SetLine (l *Line) {
     
