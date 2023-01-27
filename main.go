@@ -3,7 +3,7 @@ package main
 import (
 	"math"
     "errors"
-    //    "Type2gether/textmanager"
+    "Type2gether/textmanager"
 	"github.com/veandco/go-sdl2/sdl"
 	"github.com/veandco/go-sdl2/ttf"
 )
@@ -86,40 +86,40 @@ type Engine struct {
     renderer    *sdl.Renderer
     window      *sdl.Window
     font        Font
-    text        string
-    cursor      *Cursor
+    text        *textmanager.Text
 }
 
-type Cursor struct {
-    row int32
-    col int32
-}
-
+// TODO add cursor.Color
 func (e *Engine) RenderCursor() {
     var height int32 = e.font.GetSize()
     e.renderer.SetDrawColor(255, 255, 255, 255)
-    col := e.cursor.col
-    row := e.cursor.row
-    var padding int32
-    if col == -1 {
-        col = 0
-        padding = 0
-    } else {
-        padding = e.GetRectFromMatrix(row, col).W
+
+    for i := 0; i < len(e.text.Cursors); i++ {
+        cur := e.text.Cursors[i]
+
+        col := cur.Col
+        row := cur.Row
+        var padding int32
+        if col == -1 {
+            col = 0
+            padding = 0
+        } else {
+            padding = e.GetRectFromMatrix(row, col).W
+        }
+        e.renderer.FillRect(&sdl.Rect{X: e.GetRectFromMatrix(row, col).X + padding, Y:e.GetRectFromMatrix(row, col).Y, W: 5, H: height})
     }
-    //println(e.GetRectFromMatrix[e.cursor.row][e.cursor.col].X)
-    e.renderer.FillRect(&sdl.Rect{X: e.GetRectFromMatrix(row, col).X + padding, Y:e.GetRectFromMatrix(row, col).Y, W: 5, H: height})
+
     e.renderer.SetDrawColor(0, 0, 0, 255)
 }
 
 func (e *Engine) GetRectFromMatrix(row, col int32) *sdl.Rect {
     return e.cache.RectangleMatrix.RectangleMatrix[row][col]
 }
-
+/*
 func (e *Engine) SetText(str string) {
     e.text = str
-}
-
+}*/
+// TODO add NEW cursor
 func NewEngine(windowWidth, windowHeight int32,
                fontFilename string,
                fontSize int32,
@@ -141,8 +141,14 @@ func NewEngine(windowWidth, windowHeight int32,
     engine := &Engine{
         renderer: renderer,
         window: window,
-        cursor: &Cursor{0, -1},
+        text : textmanager.NewText(),
+        //cursor: &Cursor{0, -1},
     }
+    // IMPORTANT FIX
+    cur := textmanager.NewCursor(0)
+    cur.LineIter = engine.text.GetHead()
+    cur.CharIter = nil
+    engine.text.Cursors = append(engine.text.Cursors, cur)
 
     err = engine.SetFont(fontFilename, fontSize, fontSpaceBetween, fontColor)
 
@@ -176,6 +182,7 @@ func (e *Engine) Stop() {
             texture.Texture.Destroy()
         }
     }
+    // TODO think about dele all text ???
 }
 
 
@@ -238,6 +245,7 @@ func (e *Engine) SetCache(supportedChars string) error {
 func (e *Engine) Loop() {
 	running := true
     e.renderText()
+    DEBUG_CUR_ID := int64(0)
     for running {
 		for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
             switch t := event.(type) {
@@ -247,7 +255,7 @@ func (e *Engine) Loop() {
 				break
             case *sdl.TextInputEvent:
                 pressedKey := t.GetText()
-                e.InsertChar(rune(pressedKey[0]))
+                e.InsertChar(rune(pressedKey[0]), DEBUG_CUR_ID)
                 e.renderText()
                 // TODO FIX BUGGGGGG LEN(CURRENT LINE) < ....Columns
                 break
@@ -257,12 +265,12 @@ func (e *Engine) Loop() {
                 }
 
                 if t.Keysym.Scancode == sdl.SCANCODE_BACKSPACE {
-                    e.EraseChar()
+                    e.EraseChar(DEBUG_CUR_ID)
                 } else if t.Keysym.Scancode == sdl.SCANCODE_RETURN {
-                    e.InsertChar('\n')
+                    e.InsertChar('\n', DEBUG_CUR_ID)
                 } else if t.Keysym.Scancode == sdl.SCANCODE_TAB {
                     // TODO 4 -> SPACE IN ONE TAB
-                    e.InsertChar('\t')
+                    e.InsertChar('\t', DEBUG_CUR_ID)
                 }
 
                 e.renderText()
@@ -274,37 +282,41 @@ func (e *Engine) Loop() {
 }
 
 // TODO add flag "Back space" or "Delete" and cursor ID
-func (e *Engine) EraseChar () {
-    if  len(e.text) <= 0 {
+func (e *Engine) EraseChar (cursorId int64) {
+/*
+    cur := e.text.Cursors[cursorId]
+
+    if  cur.LineIter.GetPrev() != nil {
+        println("Line size() = ", cur.LineIter.GetValue().Length())
+        
         return
     }
-    e.text = e.text[:len(e.text) - 1]
-    e.cursor.col -= 1
-    // TODO fix kostыль
-    if e.cursor.col <= -1 {
-        e.cursor.col = -1
+*/
+    err := e.text.RemoveCharBefore(cursorId)
+    if err != nil {
+        println(err)
     }
 }
 
-// TODO add cursor ID to parameters   |
-//                                    v
-func (e *Engine) InsertChar (value rune) {
+func (e *Engine) InsertChar (value rune, cursorId int64) {
+    cur := e.text.Cursors[cursorId]
     //res := e.text.InsertChar(value)
     if value == '\n' {
-        e.text += string(value)
-        e.cursor.col = -1
-        e.cursor.row += 1
+        err := e.text.InsertLineAfter(cursorId)
+        if err != nil {
+            println(err)
+        }
     } else if value == '\t' {
         for i:= 0; i < 4 ; i++ {
-            e.InsertChar(' ')
+            e.InsertChar(' ', cursorId)
         }
 
     } else {
-        if len(e.text) < int(e.cache.RectangleMatrix.Columns) {
-            e.text += string(value)
-            e.cursor.col += 1
-            //e.cursor.col += 1
-            //e.renderText()
+        if cur.LineIter.GetValue().Length() + 1 < e.cache.RectangleMatrix.Columns {
+            err := e.text.InsertCharAfter(cursorId, value)
+            if err != nil {
+                println(err)
+            }
         }
     }
 }
@@ -319,7 +331,7 @@ func (e *Engine) renderText() {
         col int32 = 0
     )
 
-    for _, c := range e.text {
+    for _, c := range e.text.GetString() {
         e.GetRectFromMatrix(row, col).H = e.font.GetSize()
         e.GetRectFromMatrix(row, col).W = e.cache.PreRenderredCharTextures[rune(c)].Width
         e.GetRectFromMatrix(row, col).X = X
@@ -334,7 +346,7 @@ func (e *Engine) renderText() {
             col = 0
         }
     }
-    println(e.cursor.col, e.cursor.row)
+    //println(e.cursor.col, e.cursor.row)
     e.RenderCursor()
     e.renderer.Present()
 
@@ -361,7 +373,7 @@ func main() {
         panic(err)
     }
 
-    engine.SetText("")
+    //engine.SetText("")
     engine.Loop()
 }
 

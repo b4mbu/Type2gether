@@ -37,16 +37,16 @@ func (n *Node[T]) SetValue(value T) {
     n.value = value
 }
 
-/*func (l *List[T]) SetHead(value T) {
+func (l *List[T]) SetHead(value *Node[T]) {
     l.head = value
 }
 
-func (l *List[T]) SetTail(value T) {
+func (l *List[T]) SetTail(value *Node[T]) {
     l.tail = value
 }
-*/
+
 func (n *Node[T]) SetNext(value *Node[T]) {
-    n.prev = value
+    n.next = value
 }
 
 func (n *Node[T]) SetPrev(value *Node[T]) {
@@ -63,6 +63,9 @@ func (l *List[T]) PushBack(value T) error {
 
     if l.tail == nil {
         return errors.New("tail is nil")
+    }
+    if l.head == nil {
+        return errors.New("head is nil")
     }
 
     node := NewNode(value)
@@ -254,13 +257,14 @@ func (l *List[T]) Index(node *Node[T]) int32 {
 // split принимает ту ноду, которая станет головой
 func (l *List[T]) Split(node *Node[T]) (*List[T], error) {
     if node == nil {
-        return nil, errors.New("node is nil")
+        println("тщву шы тшдб фдд шы щл!")
+        return  &List[T]{}, nil
     }
 
     if !l.Consists(node) {
         return nil, errors.New("node not in list")
     }
-    
+
     list := new(List[T])
     list.head = node
     list.tail = l.tail
@@ -271,8 +275,8 @@ func (l *List[T]) Split(node *Node[T]) (*List[T], error) {
         list.length = l.length
         l.length = 0
         return list, nil
-    } 
-    
+    }
+
     list.length = l.length - l.Index(node)
     l.length -= list.length
     l.tail = node.prev
