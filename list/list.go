@@ -53,7 +53,53 @@ func (n *Node[T]) SetPrev(value *Node[T]) {
     n.prev = value
 }
 
-func (l *List[T]) PushBack(value T) error {
+func (l *List[T]) InsertBefore(value T, node *Node[T]) error {
+    if l.head == nil && node == nil && l.tail == nil {
+        l.head = NewNode(value)
+        l.length = 1
+        l.tail = l.head
+        return nil
+    }
+    
+    if l.head == nil {
+        return errors.New("head is nil but node is not nil")
+    }
+
+    if l.tail == nil {
+        return errors.New("tail is nil")
+    }
+
+    if node == nil {
+        return errors.New("node is nil")
+        //return l.PushBack(value)
+    }
+// TODO Написать PushFront, Егор был прав
+    if node == l.head {
+        return l.PushFront(value)
+    }
+
+    if !l.Consists(node) {
+        return errors.New("node not in list")
+    }
+    
+    var (
+        newNode = NewNode(value)
+        oldPrev = node.prev
+    )
+
+    node.prev = newNode
+    newNode.next = node
+    newNode.prev = oldPrev
+
+    if oldPrev != nil {
+        oldPrev.next = newNode
+    }
+
+    l.length++
+    return nil
+}
+
+func (l *List[T]) PushFront(value T) error {
     if l.head == nil && l.tail == nil {
         l.head = NewNode(value)
         l.length = 1
@@ -69,60 +115,15 @@ func (l *List[T]) PushBack(value T) error {
     }
 
     node := NewNode(value)
-    l.tail.next = node
-    node.prev = l.tail
-    l.tail = node
+
+    l.head.prev = node
+    node.next = l.head
+    l.head = node
     l.length++
     return nil
 }
-// по идее она не используется
-/*func (l *List[T]) InsertBefore(value T, node *Node[T]) error {
-    if l.head == nil && node == nil {
-        l.head = NewNode(value)
-        node = l.head
-        l.length = 1
-        return nil
-    }
 
-    if l.head == nil {
-        return errors.New("head is nil but node is not nil")
-    }
 
-    fmt.Println(node)
-    fmt.Println(l.head)
-    if node == nil {
-        print(100)
-        l.PushBack(value)
-        return nil
-    }
-
-    if node == l.head {
-        newNode := NewNode(value)
-        l.head.prev = newNode
-        newNode.next = l.head
-        l.head = newNode
-        l.length++
-        return nil
-    }
-
-    ptr := l.head
-    for ptr != nil && ptr.next != node {
-        ptr = ptr.next
-    }
-
-    if ptr == nil {
-        l.PushBack(value)
-        return nil
-    }
-
-    newNode := NewNode(value)
-    ptr.next = newNode
-    newNode.prev = ptr
-    newNode.next = node
-    node.prev = newNode
-    l.length++
-    return nil
-}*/
 
 func (l *List[T]) InsertAfter(value T, node *Node[T]) error {
     if l.head == nil && node == nil && l.tail == nil {
@@ -167,6 +168,31 @@ func (l *List[T]) InsertAfter(value T, node *Node[T]) error {
     l.length++
     return nil
 }
+
+func (l *List[T]) PushBack(value T) error {
+    if l.head == nil && l.tail == nil {
+        l.head = NewNode(value)
+        l.length = 1
+        l.tail = l.head
+        return nil
+    }
+
+    if l.tail == nil {
+        return errors.New("tail is nil")
+    }
+    if l.head == nil {
+        return errors.New("head is nil")
+    }
+
+    node := NewNode(value)
+    l.tail.next = node
+    node.prev = l.tail
+    l.tail = node
+    l.length++
+    return nil
+}
+
+
 
 //TODO: fix Remove with l.head == nil
 func (l *List[T]) Remove(node *Node[T]) error {
@@ -254,6 +280,22 @@ func (l *List[T]) Index(node *Node[T]) int32 {
     }
 }
 
+func (l *List[T]) GetNodeByIndex(index int32) *Node[T] {
+    if index == -1 {
+        return nil
+    }
+
+    if index >= l.length {
+        return l.tail
+    }
+    ptr := l.head
+    for index != 0 {
+        index--
+        ptr = ptr.next
+    }
+    return ptr
+}
+
 // split принимает ту ноду, которая станет головой
 func (l *List[T]) Split(node *Node[T]) (*List[T], error) {
     if node == nil {
@@ -299,13 +341,24 @@ func (l *List[T]) Merge(r *List[T]) error {
     }
 
     if l.head == nil {
-        return errors.New("tail is not nil where head is nil")
+        return errors.New("left list in merge: tail is not nil where head is nil")
     }
     
     if l.tail == nil {
-        return errors.New("head is not nil where tail is nil")
+        return errors.New("left list in merge: head is not nil where tail is nil")
     }
 
+    if r.head == nil && r.tail == nil{
+        return nil
+    }
+
+    if r.head == nil {
+        return errors.New("right list in merge: tail is not nil where head is nil ")
+    }
+
+    if r.tail == nil {
+        return errors.New("right list in merge: head is not nil where tail is nil")
+    }
     l.tail.next = r.head
     r.head.prev = l.tail
     l.tail = r.tail
@@ -313,12 +366,6 @@ func (l *List[T]) Merge(r *List[T]) error {
     r = nil
     return nil
 }
-
-
-
-
-
-
 
 
 
