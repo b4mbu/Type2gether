@@ -8,6 +8,20 @@ import (
 	"github.com/veandco/go-sdl2/ttf"
 )
 
+func hexToSdlColor(color uint32) sdl.Color {
+    r, g, b, a := hexToRBGA(color)
+    return sdl.Color{R: r, G: g, B: b, A: a}
+}
+
+func hexToRBGA(color uint32) (uint8, uint8, uint8, uint8) {
+    r:= uint8((color>>(3*8)) & ((1<<8) - 1))
+    g:= uint8((color>>(2*8)) & ((1<<8) - 1))
+    b:= uint8((color>>(1*8)) & ((1<<8) - 1))
+    a:= uint8((color>>(0*8)) & ((1<<8) - 1))
+    return r, g, b, a
+}
+
+
 type CharTexture struct {
     Texture *sdl.Texture
     Width   int32
@@ -89,15 +103,12 @@ type Engine struct {
     text        *textmanager.Text
 }
 
-// TODO add cursor.Color
-// TODO когда cur.Col == -1 и тогда нужно отрисовывать перед первой буквой курсор
 func (e *Engine) RenderCursor() {
     var height int32 = e.font.GetSize()
-    e.renderer.SetDrawColor(255, 255, 255, 255)
 
     for i := 0; i < len(e.text.Cursors); i++ {
         cur := e.text.Cursors[i]
-
+        e.renderer.SetDrawColor(hexToRBGA(cur.Color))
         col := cur.Col
         row := cur.Row
         var padding int32
@@ -110,7 +121,7 @@ func (e *Engine) RenderCursor() {
         e.renderer.FillRect(&sdl.Rect{X: e.GetRectFromMatrix(row, col).X + padding, Y:e.GetRectFromMatrix(row, col).Y, W: 5, H: height})
     }
 
-    e.renderer.SetDrawColor(0, 0, 0, 255)
+    e.renderer.SetDrawColor(hexToRBGA(0x000000FF))
 }
 
 func (e *Engine) GetRectFromMatrix(row, col int32) *sdl.Rect {
@@ -143,12 +154,12 @@ func NewEngine(windowWidth, windowHeight int32,
         renderer: renderer,
         window: window,
         text : textmanager.NewText(),
-        //cursor: &Cursor{0, -1},
     }
-    // IMPORTANT FIX
+    // TODO server.createCursor(id) ??
     cur := textmanager.NewCursor(0)
     cur.LineIter = engine.text.GetHead()
     cur.CharIter = nil
+    cur.Color = 0x61A8DCFF
     engine.text.Cursors = append(engine.text.Cursors, cur)
 
     err = engine.SetFont(fontFilename, fontSize, fontSpaceBetween, fontColor)
@@ -253,38 +264,43 @@ func (e *Engine) Loop() {
 			case *sdl.QuitEvent:
 				println("Quit")
 				running = false
-				break
+                break
             case *sdl.TextInputEvent:
                 pressedKey := t.GetText()
                 e.InsertChar(rune(pressedKey[0]), DEBUG_CUR_ID)
                 e.renderText()
-                // TODO FIX BUGGGGGG LEN(CURRENT LINE) < ....Columns
                 break
             case *sdl.KeyboardEvent:
+                // this branch active too when *sdl.TextInputEvent
+                // TODO be careful!
                 if t.State != sdl.PRESSED {
                     break
                 }
-
                 println("Scancode: ", t.Keysym.Scancode)
 
-                if t.Keysym.Scancode == sdl.SCANCODE_BACKSPACE {
+                switch t.Keysym.Scancode {
+                case sdl.SCANCODE_BACKSPACE:
                     e.EraseChar(DEBUG_CUR_ID)
-                } else if t.Keysym.Scancode == sdl.SCANCODE_RETURN {
+
+                case sdl.SCANCODE_RETURN:
                     e.InsertChar('\n', DEBUG_CUR_ID)
-                } else if t.Keysym.Scancode == sdl.SCANCODE_TAB {
-                    // TODO 4 -> SPACE IN ONE TAB
+
+                case sdl.SCANCODE_TAB:
+                    // TODO 4 -> SPACE_IN_ONE_TAB
                     e.InsertChar('\t', DEBUG_CUR_ID)
-                } else if t.Keysym.Scancode == 80 {
-                    println("LEFT HERE")
+
+                case sdl.SCANCODE_LEFT:
                     e.MoveCursor("left", DEBUG_CUR_ID)
-                } else if t.Keysym.Scancode == 79 {
+
+                case sdl.SCANCODE_RIGHT:
                     e.MoveCursor("right", DEBUG_CUR_ID)
-                } else if t.Keysym.Scancode == 82 {
+
+                case sdl.SCANCODE_UP:
                     e.MoveCursor("up", DEBUG_CUR_ID)
-                } else if t.Keysym.Scancode == 81 {
+
+                case sdl.SCANCODE_DOWN:
                     e.MoveCursor("down", DEBUG_CUR_ID)
                 }
-
                 e.renderText()
                 break
 		    }
@@ -306,17 +322,8 @@ func (e *Engine) MoveCursor (direction string, cursorId int64) {
     }
 }
 
-// TODO add flag "Back space" or "Delete" and cursor ID
+// TODO add flag "Back space" or "Delete"
 func (e *Engine) EraseChar (cursorId int64) {
-/*
-    cur := e.text.Cursors[cursorId]
-
-    if  cur.LineIter.GetPrev() != nil {
-        println("Line size() = ", cur.LineIter.GetValue().Length())
-        
-        return
-    }
-*/
     err := e.text.RemoveCharBefore(cursorId)
     if err != nil {
         println(err)
@@ -325,7 +332,6 @@ func (e *Engine) EraseChar (cursorId int64) {
 
 func (e *Engine) InsertChar (value rune, cursorId int64) {
     cur := e.text.Cursors[cursorId]
-    //res := e.text.InsertChar(value)
     if value == '\n' {
         err := e.text.InsertLineAfter(cursorId)
         if err != nil {
@@ -371,7 +377,6 @@ func (e *Engine) renderText() {
             col = 0
         }
     }
-    //println(e.cursor.col, e.cursor.row)
     e.RenderCursor()
     e.renderer.Present()
 
@@ -385,19 +390,18 @@ func main() {
         FontSize     int32     = 52
         SpaceBetween int32     = 10
         FontFilename string    = "nice.ttf"
-        FontColor    sdl.Color = sdl.Color{R: 255, G: 0, B: 0, A: 255}
+        FontColor    uint32    = 0xFF0000FF
         WindowTitle  string    = "Type2gether"
     )
 
     GUIStart()
     defer GUIStop()
 
-    engine, err := NewEngine(ScreenWidth, ScreenHeight, FontFilename, FontSize, SpaceBetween, FontColor, WindowTitle, AllSupportedChars)
+    engine, err := NewEngine(ScreenWidth, ScreenHeight, FontFilename, FontSize, SpaceBetween, hexToSdlColor(FontColor), WindowTitle, AllSupportedChars)
 
     if err != nil {
         panic(err)
     }
 
-    //engine.SetText("")
     engine.Loop()
 }

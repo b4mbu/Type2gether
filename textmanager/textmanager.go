@@ -24,6 +24,7 @@ type Cursor struct {
     Id       int64
     Row      int32
     Col      int32
+    Color    uint32
 }
 
 type Text struct {
@@ -123,7 +124,6 @@ func (t *Text) InsertCharAfter(cursorId int64, value rune) error {
     }
 
     if cur.CharIter == nil {
-        println("Любой принт")
         err := cur.LineIter.GetValue().PushFront(value)
 
         if err != nil {
@@ -133,19 +133,6 @@ func (t *Text) InsertCharAfter(cursorId int64, value rune) error {
 
         cur.CharIter = cur.LineIter.GetValue().GetHead()
         cur.Col = 0
-        println("char iter:= ", cur.CharIter.GetValue())
-// debug
-print("string: ")
-ptr := cur.LineIter.GetValue().GetHead()
-for ptr != nil {
-    print(string(ptr.GetValue()))
-    ptr = ptr.GetNext()
-}
-println()
-
-
-
-// end debug
         return nil
     }
 
@@ -157,18 +144,6 @@ println()
 
     cur.CharIter = cur.CharIter.GetNext()
     cur.Col++
-// debug
-print("string: ")
-ptr := cur.LineIter.GetValue().GetHead()
-for ptr != nil {
-    print(string(ptr.GetValue()))
-    ptr = ptr.GetNext()
-}
-println()
-
-
-
-// end debug
     return nil
 }
 
@@ -180,10 +155,10 @@ func (t *Text) InsertLineAfter(cursorId int64) error {
         return errors.New("Мы не должны заходить в этот if")
     }
 
-// TODO may be not empty
     if cur.CharIter == nil {
         line := new(list.List[rune])
         if cur.LineIter.GetValue().GetTail() != nil {
+            // line isn't empty
             err := t.InsertBefore(line, cur.LineIter)
 
             if err != nil {
@@ -193,6 +168,7 @@ func (t *Text) InsertLineAfter(cursorId int64) error {
             cur.Col = -1
             return nil
         }
+        // line is empty
         err := t.InsertAfter(line, cur.LineIter)
 
         if err != nil {
@@ -205,7 +181,6 @@ func (t *Text) InsertLineAfter(cursorId int64) error {
         cur.Col = -1
         return nil
     }
-    // после сплита cur.CharIter становится головой!!! (90% вероятность)
     oldLineIter := cur.LineIter
     lst, err := oldLineIter.GetValue().Split(cur.CharIter.GetNext())
 
@@ -229,10 +204,8 @@ func (t *Text) InsertLineAfter(cursorId int64) error {
     println("Head: ", cur.LineIter.GetValue().GetHead())
     cur.CharIter = nil
 
-    //cur.CharIter = node.GetValue().GetHead() если это не работает, то Егор не прав но, только в этом моменте
     cur.Row++
     cur.Col = -1
-    //println("(",cur.Row, cur.Col, ")")
     return nil
 }
 
@@ -303,7 +276,7 @@ func (t *Text) GetString() string {
         str += "\n"
         iter = iter.GetNext()
     }
-    println("Original str: ", str)
+    //println("Original str: ", str)
     return str
 }
 
@@ -362,7 +335,7 @@ func (cur *Cursor) MoveUp () {
     if cur.LineIter.GetPrev() == nil {
         return
     }
-    
+
     index := cur.LineIter.GetValue().Index(cur.CharIter)
     cur.CharIter = cur.LineIter.GetPrev().GetValue().GetNodeByIndex(index)
     cur.LineIter = cur.LineIter.GetPrev()
@@ -382,196 +355,7 @@ func (cur *Cursor) MoveDown() {
     cur.Col = cur.LineIter.GetValue().Index(cur.CharIter)
 }
 
-//LineIter -> Node (List[rune] -> head, tail, value)
-
 /*
-func (c *Cursor) SetLine (l *Line) {
-    
-    c.linePos = l
-}
-f cur.LineIter != nil {
- 92         cur.LineIter 
-func (c *Cursor) InsertCharBefore (value rune) error {
-    c.InsertCharAfter(value)
-    return c.Right()
-}
-
-func (c *Cursor) InsertCharAfter(value rune) error {
-    //fmt.Println("InsertCharAfter")
-    char := CreateChar(value)
-    if c.linePos == nil {
-        c.InsertLineAfter()
-        c.head = c.linePos
-    }
-
-
-    if c.charPos == nil {
-        c.linePos.value = char
-        c.charPos = char
-        return nil
-    }
-
-    if c.linePos.size >= 120 {
-        return errors.New("over bad( 2) Too long")
-    }
-
-    oldNextChar := c.charPos.next
-    c.charPos.next = char
-    char.prev = c.charPos
-    char.next = oldNextChar
-
-    if oldNextChar != nil {
-        oldNextChar.prev = char
-    }
-
-    return nil
-}
-
-// TODO text size++ ?????????
-
-func (c *Cursor) InsertLineAfter() error {
-    //fmt.Println("InsertLineAfter")
-    line := CreateLine()
-
-    if c.linePos == nil {
-        c.linePos = line
-        return nil
-    }
-
-    oldNextLine := c.linePos.next
-    c.linePos.next = line
-    line.prev, line.next = c.linePos, oldNextLine
-    if oldNextLine != nil {
-        oldNextLine.prev = line
-    }
-
-    return nil
-}
-
-func (c *Cursor) Left() error {
-    if c.linePos == nil || c.charPos == nil {
-        return errors.New("bof(0)")
-    }
-
-    if c.charPos.prev == nil && c.linePos.prev == nil {
-        return errors.New("bof(1)")
-    }
-
-    if c.charPos.prev == nil {
-        c.Up()
-        c.setPositionInCurrentLine(c.linePos.size - 1)
-        return nil
-    }
-
-    c.charPos = c.charPos.prev
-    return nil
-}
-
-func (c *Cursor) Up() error {
-    if c.linePos == nil || c.charPos == nil {
-        return errors.New("пупупупуп2")
-    }
-
-    if c.linePos.prev == nil {
-        return errors.New("bof")
-    }
-
-    charInd, err := c.GetIndexInCurrentLine()
-
-    if err != nil {
-        return err
-    }
-
-    c.linePos = c.linePos.prev
-    c.setPositionInCurrentLine(charInd)
-
-    return nil
-}
-
-func (c *Cursor) Right() error {
-    if c.linePos == nil || c.charPos == nil {
-        return errors.New("пупупупуп")
-    }
-
-    if c.charPos.next == nil && c.linePos.next == nil {
-        return errors.New("eof")
-    }
-
-    if c.charPos.next == nil {
-        c.Down()
-        c.setPositionInCurrentLine(0)
-        return nil
-    }
-
-    c.charPos = c.charPos.next
-    return nil
-}
-
-func (c *Cursor) Down() error {
-    if c.linePos == nil || c.charPos == nil {
-        return errors.New("пупупупуп2")
-    }
-
-    if c.linePos.next == nil {
-        return errors.New("eof")
-    }
-
-    charInd, err := c.GetIndexInCurrentLine()
-
-    if err != nil {
-        return err
-    }
-
-    c.linePos = c.linePos.next
-    c.setPositionInCurrentLine(charInd)
-
-    return nil
-}
-
-func (c *Cursor) GetIndexInCurrentLine() (uint8, error) {
-    //fmt.Println("GetIndexInCurrentLine")
-    if c.linePos == nil || c.charPos == nil {
-        return 0, errors.New("пупупупуп3")
-    }
-
-    var (
-        ptr = c.linePos.value
-        i uint8 = 0
-    )
-
-    for ;ptr != c.charPos; ptr = ptr.next {
-        if ptr == nil {
-            return 0, errors.New("invalid cursor state")
-        }
-        i++
-    }
-
-    return i, nil
-}
-
-func (c *Cursor) setPositionInCurrentLine(index uint8) error {
-    //fmt.Println("setPositionInCurrentLine")
-    if c.linePos == nil {
-        c.charPos = nil
-        return errors.New("пупупупуп4")
-    }
-
-    var (
-        ptr = c.linePos.value
-        i uint8 = 0
-    )
-    if (ptr == nil) {
-        return errors.New("normaldы")
-    }
-
-    for ;ptr.next != nil && i != index; ptr = ptr.next {
-        i++
-    }
-
-    c.charPos = ptr
-    return nil
-}
-
 func CreateTextFromFile(reader *bufio.Reader) *Cursor{ // TODO: add error
     cursor := CreateCursor()
     //fmt.Println("cursor was created succ")
