@@ -124,7 +124,7 @@ func (t *Text) InsertCharAfter(cursorId int64, value rune) error {
 
     if cur.CharIter == nil {
         println("Любой принт")
-        err := cur.LineIter.GetValue().PushBack(value)
+        err := cur.LineIter.GetValue().PushFront(value)
 
         if err != nil {
             println(err)
