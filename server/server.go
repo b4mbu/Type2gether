@@ -7,10 +7,17 @@ import (
 	"os"
 	"sync"
 
+	"github.com/fatih/color"
 	"github.com/gorilla/websocket"
 
 	"server/logger"
 )
+
+const logo string = `     __    __ __            __          
+    / /_  / // / ____ ___  / /_  __  __ 
+   / __ \/ // /_/ __ `+ "`" + `__ \/ __ \/ / / / 
+  / /_/ /__  __/ / / / / / /_/ / /_/ /  
+ /_.___/  /_/ /_/ /_/ /_/_.___/\__,_/   `
 
 type Message struct {
     AuthorUsername string 
@@ -156,11 +163,17 @@ func (s *Server) SetupRoutes() {
 }
 
 func (s *Server) Start() {
+    s.printLogo()
     s.logger.Success("Server started")
     go s.RunWriter()
     err := http.ListenAndServe(":8080", nil)
     if err != nil {
         s.logger.Error(err.Error())
     }
+}
+
+func (s *Server) printLogo() {
+    green := color.New(color.FgGreen).FprintlnFunc()
+    green(os.Stdin, logo)
 }
 
