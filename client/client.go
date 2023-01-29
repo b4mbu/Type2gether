@@ -16,7 +16,7 @@ import (
 var log = logger.NewLogger(os.Stdout)
 
 type Message struct {
-    AuthorUsername string
+    AuthorUsername string `json:"AuthorUsername"`
     Message        string `json:"message"`
 }
 
@@ -77,7 +77,7 @@ func (client *Client) startWriter() {
             return
         }
 
-        if err := client.Conn.WriteJSON(Message{Message: input}); err != nil {
+        if err := client.Conn.WriteJSON(Message{AuthorUsername: client.Username, Message: input}); err != nil {
             log.Error(err.Error())
             continue
         }
