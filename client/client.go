@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -61,9 +62,10 @@ func (client *Client) Start() {
 }
 
 func (client *Client) startWriter() {
+    scanner := bufio.NewScanner(os.Stdin)
     for {
-        var input string 
-        fmt.Scanln(&input)
+        scanner.Scan()
+        input := scanner.Text()
 
         if input == ":exit" {
             cm := websocket.FormatCloseMessage(websocket.CloseNormalClosure,
