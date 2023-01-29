@@ -30,12 +30,18 @@ type Cursor struct {
 type Text struct {
     list.List[*list.List[rune]]
     // скорее всего не нужен тк в List есть аттрибут lenght /  size      int64
-    Cursors   []*Cursor
+    Cursors      []*Cursor
+    ScreenHead   *list.Node[*list.List[rune]]
+    ScreenTail   *list.Node[*list.List[rune]]
+    ScreenRow    int32
 }
 
-func NewText() *Text{
+func NewText(screenRow int32) *Text{
     t := new(Text)
     t.PushBack(new(list.List[rune]))
+    t.ScreenHead = t.GetHead()
+    t.ScreenTail = t.GetHead()
+    t.ScreenRow = screenRow
     return t
 }
 
@@ -209,7 +215,39 @@ func (t *Text) InsertLineAfter(cursorId int64) error {
     return nil
 }
 
-//TODO cur.CharIter == nil не значит, что строка пустая || Нужно проверить везде в коде это 
+
+// TODO save distance between head and tail
+// 
+// direction scroll screen Up or Down: (0 = up) or (>0   = down)
+func (t.Text) SetScreenView(cursorId int64, direction int32) {
+    cur  := t.Cursors[cursorId]
+    dist := t.Index(t.ScreenTail) - t.Index(t.ScreenHead)
+
+    if direction == 0 {
+        // scroll Up
+
+        for dist > ScreenRow && t.ScreenHead.GetPrev() != nil {
+            t.ScreenHead = t.ScreenHead.GetPrev()
+            t.ScreenTail = t.ScreenTail.GetPrev()
+            dist--
+        }
+
+    } else {
+        // scroll Down
+
+        for dist > ScreenRow && t.ScreenTail.GetNext() != nil {
+            t.ScreenHead = t.ScreenHead.GetNext()
+            t.ScreenTail = t.ScreenTail.GetNext()
+            dist--
+        }
+    }
+
+    for dist > ScreenRow {
+        t.ScreenHead
+        dist--
+    }
+
+// TODO cur.CharIter == nil не значит, что строка пустая || Нужно проверить везде в коде это 
 func (t *Text) RemoveCharBefore(cursorId int64) error {
     cur := t.Cursors[cursorId]
 
@@ -268,16 +306,36 @@ func (t *Text) GetString() string {
     str := ""
     iter := t.GetHead()
     for iter != nil {
-        char_iter := iter.GetValue().GetHead()
-        for char_iter != nil {
-            str += string(char_iter.GetValue())
-            char_iter = char_iter.GetNext()
+        charIter := iter.GetValue().GetHead()
+        for charIter != nil {
+            str += string(charIter.GetValue())
+            charIter = charIter.GetNext()
         }
         str += "\n"
         iter = iter.GetNext()
     }
     //println("Original str: ", str)
     return str
+}
+
+// TODO think about width
+func (t *Text) GetScreenString() string {
+    if t.ScreenHead == nil {
+        println("ScreenHead is nil")
+        return ""
+    }
+    ptr1 := t.ScreenHead
+    res := ""
+    for ptr1 != nil || ptr1!= t.ScreenTail {
+        ptr2 := ptr1.GetValue().GetHead()
+        for ptr2 != nil {
+            res += string(ptr2.GetValue())
+            ptr2 = ptr2.GetNext()
+        }
+        res += "\n"
+        ptr1 = ptr1.GetNext()
+    }
+    return res
 }
 
 func (cur *Cursor) MoveLeft() {
