@@ -1,4 +1,4 @@
-package server
+package main
 
 import (
 	"encoding/json"
@@ -64,7 +64,7 @@ func (s *Server) checkAuth(next http.HandlerFunc) http.HandlerFunc {
             password = r.Header.Get("password")
         )
         _, ok := s.clients[username]
-
+        
         if password == s.password && !ok {
             next.ServeHTTP(w, r)
             return
