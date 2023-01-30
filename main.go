@@ -112,6 +112,12 @@ func (e *Engine) RenderCursor() {
         col := cur.Col
         row := cur.Row
         var padding int32
+/*        if row > 16 {
+            cur.Row = 16
+            row = 16
+            println("AXTYNG!!!")
+        }
+*/
         if col == -1 {
             col = 0
             padding = 0
@@ -155,12 +161,6 @@ func NewEngine(windowWidth, windowHeight int32,
         window: window,
         text : textmanager.NewText(),
     }
-    // TODO server.createCursor(id) ??
-    cur := textmanager.NewCursor(0)
-    cur.LineIter = engine.text.GetHead()
-    cur.CharIter = nil
-    cur.Color = 0x61A8DCFF
-    engine.text.Cursors = append(engine.text.Cursors, cur)
 
     err = engine.SetFont(fontFilename, fontSize, fontSpaceBetween, fontColor)
 
@@ -174,6 +174,14 @@ func NewEngine(windowWidth, windowHeight int32,
         return nil, err
     }
 
+    // TODO server.createCursor(id) ??
+    cur := textmanager.NewCursor(0, engine.cache.RectangleMatrix.Rows)
+    cur.LineIter = engine.text.GetHead()
+    cur.CharIter = nil
+    cur.Color = 0x61A8DCFF
+    cur.ScreenHead = engine.text.GetHead()
+    cur.ScreenTail = engine.text.GetTail()
+    engine.text.Cursors = append(engine.text.Cursors, cur)
     return engine, nil
 }
 
@@ -362,7 +370,8 @@ func (e *Engine) renderText() {
         col int32 = 0
     )
 
-    for _, c := range e.text.GetString() {
+//  for _, c := range e.text.GetString() {
+    for _, c := range e.text.GetScreenString(0) {
         e.GetRectFromMatrix(row, col).H = e.font.GetSize()
         e.GetRectFromMatrix(row, col).W = e.cache.PreRenderredCharTextures[rune(c)].Width
         e.GetRectFromMatrix(row, col).X = X

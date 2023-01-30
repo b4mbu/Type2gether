@@ -19,43 +19,41 @@ const (
 
 
 type Cursor struct {
-    LineIter *list.Node[*list.List[rune]]
-    CharIter *list.Node[rune]
-    Id       int64
-    Row      int32
-    Col      int32
-    Color    uint32
+    LineIter     *list.Node[*list.List[rune]]
+    CharIter     *list.Node[rune]
+    Id           int64
+    Row          int32
+    Col          int32
+    Color        uint32
+    ScreenHead   *list.Node[*list.List[rune]]
+    ScreenTail   *list.Node[*list.List[rune]]
+    ScreenRow    int32
 }
 
 type Text struct {
     list.List[*list.List[rune]]
     // скорее всего не нужен тк в List есть аттрибут lenght /  size      int64
     Cursors      []*Cursor
-    ScreenHead   *list.Node[*list.List[rune]]
-    ScreenTail   *list.Node[*list.List[rune]]
-    ScreenRow    int32
 }
 
-func NewText(screenRow int32) *Text{
+func NewText() *Text{
     t := new(Text)
     t.PushBack(new(list.List[rune]))
-    t.ScreenHead = t.GetHead()
-    t.ScreenTail = t.GetHead()
-    t.ScreenRow = screenRow
     return t
 }
 
-//TODO написать присвоение id для курсора
-//TODO на данном этапе при создании NewCursor просто всегда будем 0 в него передавать, когда будем писать серверную часть нужно будет определиться с созданием Id
-func NewCursor(Id int64) *Cursor {
+// TODO написать присвоение id для курсора
+// TODO на данном этапе при создании NewCursor просто всегда будем 0 в него передавать, когда будем писать серверную часть нужно будет определиться с созданием Id
+func NewCursor(Id int64, ScreenRow int32) *Cursor {
     c := new(Cursor)
     c.Row = 0
     c.Col = -1
     c.Id = Id
+    c.ScreenRow = ScreenRow
     return c
 }
 
-//TODO сделать красиво
+// TODO сделать красиво
 //сделать откат строки, и ячейки если у нас не вставилась буква
 // строку откатываем, только если мы одновременно создаём строку и ячейку
 // иначе откатываем только ячейку
@@ -161,6 +159,7 @@ func (t *Text) InsertLineAfter(cursorId int64) error {
         return errors.New("Мы не должны заходить в этот if")
     }
 
+
     if cur.CharIter == nil {
         line := new(list.List[rune])
         if cur.LineIter.GetValue().GetTail() != nil {
@@ -170,7 +169,15 @@ func (t *Text) InsertLineAfter(cursorId int64) error {
             if err != nil {
                 return err
             }
+//test
+            if cur.ScreenTail.GetNext() != nil {
+                cur.ScreenTail = cur.ScreenTail.GetNext()
+            }
             cur.Row++
+            if cur.Row >= cur.ScreenRow {
+                cur.Row = cur.ScreenRow - 1
+                cur.SetScreenView(1)
+            }
             cur.Col = -1
             return nil
         }
@@ -183,7 +190,16 @@ func (t *Text) InsertLineAfter(cursorId int64) error {
 
         cur.LineIter = cur.LineIter.GetNext()
         cur.CharIter = cur.LineIter.GetValue().GetHead()
+        
+
+if cur.ScreenTail.GetNext() != nil {
+    cur.ScreenTail = cur.ScreenTail.GetNext()
+}
         cur.Row++
+        if cur.Row >= cur.ScreenRow {
+            cur.Row = cur.ScreenRow - 1
+            cur.SetScreenView(1)
+        }
         cur.Col = -1
         return nil
     }
@@ -205,12 +221,22 @@ func (t *Text) InsertLineAfter(cursorId int64) error {
         t.SetTail(node)
     }
     oldLineIter.SetNext(node)
-    println("Next:", cur.LineIter.GetNext()," = NODE:", node)
+    // println("Next:", cur.LineIter.GetNext()," = NODE:", node)
     cur.LineIter = node
-    println("Head: ", cur.LineIter.GetValue().GetHead())
+    // println("Head: ", cur.LineIter.GetValue().GetHead())
     cur.CharIter = nil
 
+// may be bug?
+if cur.ScreenTail.GetNext() != nil {
+    cur.ScreenTail = cur.ScreenTail.GetNext()
+}
+
+//
     cur.Row++
+    if cur.Row >= cur.ScreenRow {
+        cur.Row = cur.ScreenRow - 1
+        cur.SetScreenView(1)
+    }
     cur.Col = -1
     return nil
 }
@@ -219,34 +245,37 @@ func (t *Text) InsertLineAfter(cursorId int64) error {
 // TODO save distance between head and tail
 // 
 // direction scroll screen Up or Down: (0 = up) or (>0   = down)
-func (t.Text) SetScreenView(cursorId int64, direction int32) {
-    cur  := t.Cursors[cursorId]
-    dist := t.Index(t.ScreenTail) - t.Index(t.ScreenHead)
+func (cur *Cursor) SetScreenView(direction int32) {
+    ptr  := cur.ScreenHead
+    var count int32 = 1
+    for ptr != cur.ScreenTail {
+
+        if ptr == nil {
+            println("Error Screen")
+            return
+        }
+        ptr = ptr.GetNext()
+        count++
+    }
 
     if direction == 0 {
         // scroll Up
 
-        for dist > ScreenRow && t.ScreenHead.GetPrev() != nil {
-            t.ScreenHead = t.ScreenHead.GetPrev()
-            t.ScreenTail = t.ScreenTail.GetPrev()
-            dist--
+        for count > cur.ScreenRow && cur.ScreenTail.GetPrev() != nil {
+            cur.ScreenTail = cur.ScreenTail.GetPrev()
+            count--
         }
 
     } else {
         // scroll Down
 
-        for dist > ScreenRow && t.ScreenTail.GetNext() != nil {
-            t.ScreenHead = t.ScreenHead.GetNext()
-            t.ScreenTail = t.ScreenTail.GetNext()
-            dist--
+        for count > cur.ScreenRow && cur.ScreenHead.GetNext() != nil {
+            cur.ScreenHead = cur.ScreenHead.GetNext()
+            count--
         }
     }
 
-    for dist > ScreenRow {
-        t.ScreenHead
-        dist--
-    }
-
+}
 // TODO cur.CharIter == nil не значит, что строка пустая || Нужно проверить везде в коде это 
 func (t *Text) RemoveCharBefore(cursorId int64) error {
     cur := t.Cursors[cursorId]
@@ -270,6 +299,10 @@ func (t *Text) RemoveCharBefore(cursorId int64) error {
         cur.LineIter = prev
         cur.CharIter = oldTail
         cur.Row--
+        if cur.Row < 0 {
+            cur.Row = 0
+            cur.SetScreenView(0)
+        }
         cur.Col = oldLen - 1
 
         return nil
@@ -319,14 +352,16 @@ func (t *Text) GetString() string {
 }
 
 // TODO think about width
-func (t *Text) GetScreenString() string {
-    if t.ScreenHead == nil {
+func (t *Text) GetScreenString(cursorId int32) string {
+    cur := t.Cursors[cursorId]
+    if cur.ScreenHead == nil || cur.ScreenTail == nil {
         println("ScreenHead is nil")
         return ""
     }
-    ptr1 := t.ScreenHead
+    ptr1 := cur.ScreenHead
+    println(cur.ScreenHead, cur.ScreenTail)
     res := ""
-    for ptr1 != nil || ptr1!= t.ScreenTail {
+    for ptr1 != nil && ptr1 != cur.ScreenTail.GetNext() {
         ptr2 := ptr1.GetValue().GetHead()
         for ptr2 != nil {
             res += string(ptr2.GetValue())
@@ -335,6 +370,7 @@ func (t *Text) GetScreenString() string {
         res += "\n"
         ptr1 = ptr1.GetNext()
     }
+    println("res: ", res)
     return res
 }
 
@@ -347,6 +383,10 @@ func (cur *Cursor) MoveLeft() {
         cur.LineIter = cur.LineIter.GetPrev()
         cur.CharIter = cur.LineIter.GetValue().GetTail()
         cur.Row--
+        if cur.Row < 0 {
+            cur.Row = 0
+            cur.SetScreenView(0)
+        }
         cur.Col = cur.LineIter.GetValue().Length() - 1
         return
     }
@@ -364,6 +404,10 @@ func (cur *Cursor) MoveRight() {
             cur.LineIter = cur.LineIter.GetNext()
             cur.CharIter = nil
             cur.Row++
+            if cur.Row >= cur.ScreenRow {
+                cur.Row = cur.ScreenRow - 1
+                cur.SetScreenView(1)
+            }
             cur.Col = -1
             return
         }
@@ -381,6 +425,10 @@ func (cur *Cursor) MoveRight() {
         cur.LineIter = cur.LineIter.GetNext()
         cur.CharIter = nil
         cur.Row++
+        if cur.Row >= cur.ScreenRow {
+            cur.Row = cur.ScreenRow - 1
+            cur.SetScreenView(1)
+        }
         cur.Col = -1
         return
     }
@@ -398,6 +446,10 @@ func (cur *Cursor) MoveUp () {
     cur.CharIter = cur.LineIter.GetPrev().GetValue().GetNodeByIndex(index)
     cur.LineIter = cur.LineIter.GetPrev()
     cur.Row--
+    if cur.Row < 0 {
+        cur.Row = 0
+        cur.SetScreenView(0)
+    }
     cur.Col = cur.LineIter.GetValue().Index(cur.CharIter)
 }
 
@@ -410,6 +462,10 @@ func (cur *Cursor) MoveDown() {
     cur.CharIter = cur.LineIter.GetNext().GetValue().GetNodeByIndex(index)
     cur.LineIter = cur.LineIter.GetNext()
     cur.Row++
+    if cur.Row >= cur.ScreenRow {
+        cur.Row = cur.ScreenRow - 1
+        cur.SetScreenView(1)
+    }
     cur.Col = cur.LineIter.GetValue().Index(cur.CharIter)
 }
 
