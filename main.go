@@ -108,8 +108,9 @@ func (e *Engine) RenderCursor() {
 
     for i := 0; i < len(e.text.Cursors); i++ {
         cur := e.text.Cursors[i]
+        println("Cur head: ", cur.ScreenHead.RowNumber, "Cur tail: ", cur.ScreenTail.RowNumber)
         e.renderer.SetDrawColor(hexToRBGA(cur.Color))
-        col := cur.Col
+        col := cur.Col - cur.ScreenHead.RowNumber
         row := cur.Row
         var padding int32
 /*        if row > 16 {
@@ -179,8 +180,9 @@ func NewEngine(windowWidth, windowHeight int32,
     cur.LineIter = engine.text.GetHead()
     cur.CharIter = nil
     cur.Color = 0x61A8DCFF
-    cur.ScreenHead = engine.text.GetHead()
-    cur.ScreenTail = engine.text.GetTail()
+    // TODO для server сделать нормальное присвоение Tail и Head
+    cur.ScreenHead.LineIter = engine.text.GetHead()
+    cur.ScreenTail.LineIter = engine.text.GetTail()
     engine.text.Cursors = append(engine.text.Cursors, cur)
     return engine, nil
 }
