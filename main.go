@@ -371,7 +371,8 @@ func (e *Engine) renderText() {
 		row int32 = 0
 		col int32 = 0
 	)
-
+    // TODO cursorId                         |
+    //                                       v
 	for _, c := range e.text.GetScreenString(0) {
 		e.GetRectFromMatrix(row, col).H = e.font.GetSize()
 		e.GetRectFromMatrix(row, col).W = e.cache.PreRenderredCharTextures[rune(c)].Width
