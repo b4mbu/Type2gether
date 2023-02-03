@@ -366,6 +366,18 @@ func (t *Text) RemoveCharBefore(cursorId int64) error {
 	return nil
 }
 
+func (t *Text) RemoveCharAfter(cursorId int64) error {
+    cur := t.Cursors[cursorId]
+    oldCharIter := cur.CharIter
+    oldLineIter := cur.LineIter
+    cur.MoveRight()
+    if oldCharIter != cur.CharIter || oldLineIter != cur.LineIter  {
+        err := t.RemoveCharBefore(cursorId)
+        return err
+    }
+    return nil
+}
+
 // курсор не двигается!!
 func (t *Text) MergeLines(cursorId int64) error {
 	cur := t.Cursors[cursorId]
@@ -529,4 +541,33 @@ func (cur *Cursor) MoveDown() {
 	cur.Row++
 	cur.Col = cur.LineIter.GetValue().Index(cur.CharIter)
 }
+
+func (cur *Cursor) MoveHome() {
+    cur.CharIter = cur.LineIter.GetValue().GetHead()
+    cur.Col = -1
+}
+
+func (cur *Cursor) MoveEnd() {
+    cur.CharIter = cur.LineIter.GetValue().GetTail()
+    cur.Col = cur.LineIter.GetValue().Length() - 1
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
