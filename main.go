@@ -103,26 +103,32 @@ type Engine struct {
 	text     *textmanager.Text
 }
 
-func (e *Engine) RenderCursor() {
-	var height int32 = e.font.GetSize()
+func (e *Engine) RenderCursor(cursorId int64) {
+	var (
+        height int32 = e.font.GetSize()
+        delta  int32 = e.text.Cursors[cursorId].Col - e.cache.RectangleMatrix.Columns + 2
+    )
+
+    if delta < 0 {
+        delta = 0
+    }
 
 	for i := 0; i < len(e.text.Cursors); i++ {
 		cur := e.text.Cursors[i]
-		println("Cur head: ", cur.ScreenHead.RowNumber, "Cur tail: ", cur.ScreenTail.RowNumber)
+		//println("Cur head: ", cur.ScreenHead.RowNumber, "Cur tail: ", cur.ScreenTail.RowNumber)
 		e.renderer.SetDrawColor(hexToRBGA(cur.Color))
 		col := cur.Col
 		row := cur.Row - cur.ScreenHead.RowNumber
 		var padding int32
-		/*        if row > 16 {
-		              cur.Row = 16
-		              row = 16
-		              println("AXTYNG!!!")
-		          }
-		*/
+
 		if col == -1 {
 			col = 0
 			padding = 0
 		} else {
+            if col < delta {
+                continue
+            }
+            col -= delta
 			padding = e.GetRectFromMatrix(row, col).W
 		}
 		e.renderer.FillRect(&sdl.Rect{X: e.GetRectFromMatrix(row, col).X + padding, Y: e.GetRectFromMatrix(row, col).Y, W: 5, H: height})
@@ -250,14 +256,13 @@ func (e *Engine) SetCache(supportedChars string) error {
 		if fontSurface.W < mn {
 			mn = fontSurface.W
 		}
-		height = fontSurface.H
+		height = e.font.size
 	}
 	var (
 		w, h    = e.window.GetSize()
 		rows    = h / height
 		columns = w / (mn + e.font.GetSpaceBetween())
 	)
-
 	cache.RectangleMatrix = NewRectangleMatrix(rows, columns, e.font.GetSize(), e.font.GetSpaceBetween())
 	e.cache = cache
 
@@ -266,19 +271,19 @@ func (e *Engine) SetCache(supportedChars string) error {
 
 func (e *Engine) Loop() {
 	running := true
-	e.renderText()
-	DEBUG_CUR_ID := int64(0)
+    DEBUG_CUR_ID := int64(0)
+	e.renderText(DEBUG_CUR_ID)
 	for running {
 		for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
 			switch t := event.(type) {
 			case *sdl.QuitEvent:
-				println("Quit")
+				//println("Quit")
 				running = false
 				break
 			case *sdl.TextInputEvent:
 				pressedKey := t.GetText()
 				e.InsertChar(rune(pressedKey[0]), DEBUG_CUR_ID)
-				e.renderText()
+				e.renderText(DEBUG_CUR_ID)
 				break
 			case *sdl.KeyboardEvent:
 				// this branch active too when *sdl.TextInputEvent
@@ -286,7 +291,7 @@ func (e *Engine) Loop() {
 				if t.State != sdl.PRESSED {
 					break
 				}
-				println("Scancode: ", t.Keysym.Scancode)
+				//println("Scancode: ", t.Keysym.Scancode)
 
 				switch t.Keysym.Scancode {
 				case sdl.SCANCODE_BACKSPACE:
@@ -311,7 +316,7 @@ func (e *Engine) Loop() {
 				case sdl.SCANCODE_DOWN:
 					e.MoveCursor("down", DEBUG_CUR_ID)
 				}
-				e.renderText()
+				e.renderText(DEBUG_CUR_ID)
 				break
 			}
 		}
@@ -336,16 +341,16 @@ func (e *Engine) MoveCursor(direction string, cursorId int64) {
 func (e *Engine) EraseChar(cursorId int64) {
 	err := e.text.RemoveCharBefore(cursorId)
 	if err != nil {
-		println(err)
+		//println(err)
 	}
 }
 
 func (e *Engine) InsertChar(value rune, cursorId int64) {
-	cur := e.text.Cursors[cursorId]
+	//_ := e.text.Cursors[cursorId]
 	if value == '\n' {
 		err := e.text.InsertLineAfter(cursorId)
 		if err != nil {
-			println(err)
+			//println(err)
 		}
 	} else if value == '\t' {
 		for i := 0; i < 4; i++ {
@@ -353,31 +358,61 @@ func (e *Engine) InsertChar(value rune, cursorId int64) {
 		}
 
 	} else {
-		if cur.LineIter.GetValue().Length()+1 < e.cache.RectangleMatrix.Columns {
-			err := e.text.InsertCharAfter(cursorId, value)
-			if err != nil {
-				println(err)
-			}
+		//if cur.LineIter.GetValue().Length()+1 < e.cache.RectangleMatrix.Columns {
+		err := e.text.InsertCharAfter(cursorId, value)
+		if err != nil {
+			//println(err)
 		}
+		//}
 	}
 }
 
-func (e *Engine) renderText() {
+func (e *Engine) renderText(cursorId int64) {
 	e.renderer.Clear()
 
-	var (
+	var ( 
 		X   int32 = e.font.GetSpaceBetween()
 		Y   int32 = 0
 		row int32 = 0
 		col int32 = 0
+        delta int32 = e.text.Cursors[cursorId].Col - e.cache.RectangleMatrix.Columns + 2
 	)
+    
+    //println("delta:",  delta)
 
+    if delta < 0 {
+        delta = 0
+    }
+    
 	for _, c := range e.text.GetScreenString(0) {
-		e.GetRectFromMatrix(row, col).H = e.font.GetSize()
-		e.GetRectFromMatrix(row, col).W = e.cache.PreRenderredCharTextures[rune(c)].Width
-		e.GetRectFromMatrix(row, col).X = X
-		e.GetRectFromMatrix(row, col).Y = Y
-		e.renderer.Copy(e.cache.PreRenderredCharTextures[rune(c)].Texture, nil, e.GetRectFromMatrix(row, col))
+        if col < delta {
+            if c == '\n' {
+                Y += e.font.GetSize()
+                X = e.font.GetSpaceBetween()
+                row++
+                col = 0
+            } else {
+                col++
+            }
+            continue
+        }
+        if col - delta + 1 >= e.cache.RectangleMatrix.Columns {
+            if c == '\n' {
+                Y += e.font.GetSize()
+                X = e.font.GetSpaceBetween()
+                row++
+                col = 0
+            } else {
+                col++
+            }
+            continue
+        }
+        //println("col - del: ", col - delta)
+		e.GetRectFromMatrix(row, col - delta).H = e.font.GetSize()
+		e.GetRectFromMatrix(row, col - delta).W = e.cache.PreRenderredCharTextures[rune(c)].Width
+		e.GetRectFromMatrix(row, col - delta).X = X
+		e.GetRectFromMatrix(row, col - delta).Y = Y
+		e.renderer.Copy(e.cache.PreRenderredCharTextures[rune(c)].Texture, nil, e.GetRectFromMatrix(row, col - delta))
 		X += e.cache.PreRenderredCharTextures[rune(c)].Width + e.font.GetSpaceBetween()
 		col++
 		if c == '\n' {
@@ -387,7 +422,7 @@ func (e *Engine) renderText() {
 			col = 0
 		}
 	}
-	e.RenderCursor()
+	e.RenderCursor(cursorId)
 	e.renderer.Present()
 
 }
@@ -397,8 +432,8 @@ func main() {
 		ScreenHeight int32  = 720
 		ScreenWidth  int32  = 1280
 		FontSize     int32  = 52
-		SpaceBetween int32  = 10
-		FontFilename string = "nice.ttf"
+		SpaceBetween int32  = 0
+		FontFilename string = "MonoNL-Regular.ttf"
 		FontColor    uint32 = 0xFF0000FF
 		WindowTitle  string = "Type2gether"
 	)

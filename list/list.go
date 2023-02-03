@@ -318,7 +318,6 @@ func (l *List[T]) Split(node *Node[T]) (*List[T], error) {
 	return list, nil
 }
 
-//TODO доделать merge на уровне текста
 func (l *List[T]) Merge(r *List[T]) error {
 	if r == nil {
 		return errors.New("list is nil")
