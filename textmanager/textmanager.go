@@ -543,7 +543,7 @@ func (cur *Cursor) MoveDown() {
 }
 
 func (cur *Cursor) MoveHome() {
-    cur.CharIter = cur.LineIter.GetValue().GetHead()
+    cur.CharIter = nil
     cur.Col = -1
 }
 

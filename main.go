@@ -294,7 +294,7 @@ func (e *Engine) Loop() {
 				if t.State != sdl.PRESSED {
 					break
 				}
-                // println("Scancode: ", t.Keysym.Scancode)
+                 println("Scancode: ", t.Keysym.Scancode)
                 
                 key := t.Keysym.Scancode
 
@@ -379,19 +379,23 @@ func (e *Engine) InsertChar(value rune, cursorId int64) {
 	}
 }
 
+//TODO Поменять цвет нумерации строкч
 func (e *Engine) renderText(cursorId int64) {
 	e.renderer.Clear()
 
 	var (
+        // e.font.GetSpaceBetween равен 0, поэтому он сейчас ни на что не влияет || тут +7 это просто отступ от первой цифры
         PaddingLeft int32 = e.font.GetSpaceBetween() * 4 + e.cache.PreRenderredCharTextures[rune('1')].Width * 4 + 7
 		X   int32 = PaddingLeft + e.font.GetSpaceBetween() 
 		Y   int32 = 0
 		row int32 = 0
+        // тут col равен 5 потому что мы 4 колоноки оставляем под нумерацию 
 		col int32 = 5
-        delta int32 = e.text.Cursors[cursorId].Col - e.cache.RectangleMatrix.Columns + 7
+        // тут я пока хз почему + 7, я поменял на + 5 и ничего не поменялось 
+        delta int32 = e.text.Cursors[cursorId].Col - e.cache.RectangleMatrix.Columns + 5
 	)
 
-    //println("delta:",  delta)
+    println("delta:",  delta)
 
     if delta < 5 {
         delta = 5
@@ -420,10 +424,10 @@ func (e *Engine) renderText(cursorId int64) {
             }
             continue
         }
-        //println("col - del: ", col - delta)
+        println("col - del: ", col - delta)
 		e.GetRectFromMatrix(row, col - delta).H = e.font.GetSize()
 		e.GetRectFromMatrix(row, col - delta).W = e.cache.PreRenderredCharTextures[rune(c)].Width
-		e.GetRectFromMatrix(row, col - delta).X = X
+        e.GetRectFromMatrix(row, col - delta).X = X
 		e.GetRectFromMatrix(row, col - delta).Y = Y
 		e.renderer.Copy(e.cache.PreRenderredCharTextures[rune(c)].Texture, nil, e.GetRectFromMatrix(row, col - delta))
 		X += e.cache.PreRenderredCharTextures[rune(c)].Width + e.font.GetSpaceBetween()
