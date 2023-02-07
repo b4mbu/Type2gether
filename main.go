@@ -106,12 +106,11 @@ type Engine struct {
 func (e *Engine) RenderCursor(cursorId int64) {
 	var (
         height int32 = e.font.GetSize()
-        delta  int32 = e.text.Cursors[cursorId].Col - e.cache.RectangleMatrix.Columns + 2
+        //delta  int32 = e.text.Cursors[cursorId].Col - e.cache.RectangleMatrix.Columns + 1 + 4
     )
 
-    if delta < 0 {
-        delta = 0
-    }
+    leftBorder := e.text.Cursors[cursorId].ScreenLeft
+    println("LeftBorder: ", leftBorder)
 
 	for i := 0; i < len(e.text.Cursors); i++ {
 		cur := e.text.Cursors[i]
@@ -122,13 +121,14 @@ func (e *Engine) RenderCursor(cursorId int64) {
 		var padding int32
 
 		if col == -1 {
-			col = 0
+			col = 4 - leftBorder
 			padding = 0
 		} else {
-            if col < delta {
+            if col < leftBorder {
                 continue
             }
-            col -= delta
+            col -= leftBorder
+            col += 4
 			padding = e.GetRectFromMatrix(row, col).W
 		}
 		e.renderer.FillRect(&sdl.Rect{X: e.GetRectFromMatrix(row, col).X + padding, Y: e.GetRectFromMatrix(row, col).Y, W: 5, H: height})
@@ -382,32 +382,49 @@ func (e *Engine) InsertChar(value rune, cursorId int64) {
 //TODO Поменять цвет нумерации строкч
 func (e *Engine) renderText(cursorId int64) {
 	e.renderer.Clear()
-
 	var (
-        // e.font.GetSpaceBetween равен 0, поэтому он сейчас ни на что не влияет || тут +7 это просто отступ от первой цифры
-        PaddingLeft int32 = e.font.GetSpaceBetween() * 4 + e.cache.PreRenderredCharTextures[rune('1')].Width * 4 + 7
-		X   int32 = PaddingLeft + e.font.GetSpaceBetween() 
+        // e.font.GetSpaceBetween равен 0, поэтому он сейчас ни на что не влияет || тут +7 px это просто отступ от первой цифры
+        PaddingLeft int32 = (e.font.GetSpaceBetween() + e.cache.PreRenderredCharTextures[rune('1')].Width) * 4 + 7
+		X   int32 = PaddingLeft
 		Y   int32 = 0
 		row int32 = 0
-        // тут col равен 5 потому что мы 4 колоноки оставляем под нумерацию 
-		col int32 = 5
-        // тут я пока хз почему + 7, я поменял на + 5 и ничего не поменялось 
-        delta int32 = e.text.Cursors[cursorId].Col - e.cache.RectangleMatrix.Columns + 5
+        // тут col равен 4 потому что мы 4 колоноки оставляем под нумерацию 
+		col int32 = 4
+        // TODO относительные координаты курсора от экрана
+
+        delta int32 = e.text.Cursors[cursorId].Col - e.cache.RectangleMatrix.Columns + 2 + 4
 	)
 
     println("delta:",  delta)
 
-    if delta < 5 {
-        delta = 5
+    leftBorder := e.text.Cursors[cursorId].ScreenLeft
+    println("LeftBorderText: ", leftBorder)
+    if e.text.Cursors[cursorId].Col <= leftBorder {
+        println("ths")
+        e.text.Cursors[cursorId].ScreenLeft = e.text.Cursors[cursorId].Col
+        if e.text.Cursors[cursorId].ScreenLeft == -1 {
+            e.text.Cursors[cursorId].ScreenLeft = 0
+        }
+        delta = e.text.Cursors[cursorId].ScreenLeft
+    } else if delta >= leftBorder {
+        println("code")
+        e.text.Cursors[cursorId].ScreenLeft = delta
+    } else {
+        println("work")
+        delta = leftBorder
+    }
+
+    if delta < 0 {
+        delta = 0
     }
 
 	for _, c := range e.text.GetScreenString(0) {
-        if col < delta {
+        if col - 4 < delta {
             if c == '\n' {
                 Y += e.font.GetSize()
                 X = PaddingLeft + e.font.GetSpaceBetween()
                 row++
-                col = 5
+                col = 4
             } else {
                 col++
             }
@@ -418,13 +435,13 @@ func (e *Engine) renderText(cursorId int64) {
                 Y += e.font.GetSize()
                 X = PaddingLeft + e.font.GetSpaceBetween()
                 row++
-                col = 5
+                col = 4
             } else {
                 col++
             }
             continue
         }
-        println("col - del: ", col - delta)
+        println("col - del: ", col - delta, "c:", rune(c))
 		e.GetRectFromMatrix(row, col - delta).H = e.font.GetSize()
 		e.GetRectFromMatrix(row, col - delta).W = e.cache.PreRenderredCharTextures[rune(c)].Width
         e.GetRectFromMatrix(row, col - delta).X = X
@@ -436,13 +453,13 @@ func (e *Engine) renderText(cursorId int64) {
 			Y += e.font.GetSize()
 			X = PaddingLeft + e.font.GetSpaceBetween()
 			row++
-			col = 5
+			col = 4
 		}
 	}
 
     cur := e.text.Cursors[cursorId]
     row = 0
-    col = 4
+    col = 3
     X = e.font.GetSpaceBetween() * 3 + e.cache.PreRenderredCharTextures[rune('1')].Width * 3
     Y = 0
     for num := cur.ScreenHead.RowNumber; num <= cur.ScreenTail.RowNumber; num++ {
@@ -471,7 +488,7 @@ func (e *Engine) renderText(cursorId int64) {
         Y += e.font.GetSize()
         X = e.font.GetSpaceBetween() * 3 + e.cache.PreRenderredCharTextures[rune('1')].Width * 3
         row++
-        col = 4
+        col = 3
     }
 
 	e.RenderCursor(cursorId)

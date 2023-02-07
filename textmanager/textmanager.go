@@ -24,11 +24,16 @@ type Cursor struct {
 	Row        int32
 	Col        int32
 	Color      uint32
+
+    ScreenLeft int32
+
 	ScreenHead *Border
 	ScreenTail *Border
 	ScreenRow  int32
+    ScreenCol  int32
 }
 
+//Эта структура нужна для скрола
 //Эта структура нужна для отрисовки нумерации строк
 type Border struct {
 	LineIter  *list.Node[*list.List[rune]]
@@ -106,7 +111,8 @@ func NewCursor(Id int64, ScreenRow int32) *Cursor {
 	c.Col = -1
 	c.Id = Id
 	c.ScreenRow = ScreenRow
-	c.ScreenHead = &Border{RowNumber: 0}
+	c.ScreenLeft = 0
+    c.ScreenHead = &Border{RowNumber: 0}
 	c.ScreenTail = &Border{RowNumber: 0}
 	return c
 }
