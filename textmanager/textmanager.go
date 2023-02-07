@@ -105,12 +105,13 @@ func NewText() *Text {
 
 // TODO написать присвоение id для курсора
 // TODO на данном этапе при создании NewCursor просто всегда будем 0 в него передавать, когда будем писать серверную часть нужно будет определиться с созданием Id
-func NewCursor(Id int64, ScreenRow int32) *Cursor {
+func NewCursor(Id int64, ScreenRow, ScreenCol int32) *Cursor {
 	c := new(Cursor)
 	c.Row = 0
 	c.Col = -1
 	c.Id = Id
 	c.ScreenRow = ScreenRow
+    c.ScreenCol = ScreenCol
 	c.ScreenLeft = 0
     c.ScreenHead = &Border{RowNumber: 0}
 	c.ScreenTail = &Border{RowNumber: 0}
@@ -557,23 +558,4 @@ func (cur *Cursor) MoveEnd() {
     cur.CharIter = cur.LineIter.GetValue().GetTail()
     cur.Col = cur.LineIter.GetValue().Length() - 1
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

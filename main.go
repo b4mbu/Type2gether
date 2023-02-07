@@ -48,6 +48,7 @@ func GUIStop() {
 
 type Cache struct {
 	PreRenderredCharTextures map[rune]CharTexture
+	PreRenderredNumsTextures map[rune]CharTexture
 	RectangleMatrix          *RectangleMatrix
 }
 
@@ -75,6 +76,7 @@ type Font struct {
 	filename     string
 	size         int32
 	color        sdl.Color
+    numsColor    sdl.Color
 	spaceBetween int32
 	ttfFont      *ttf.Font
 }
@@ -91,9 +93,14 @@ func (f *Font) GetColor() sdl.Color {
 	return f.color
 }
 
+func (f* Font) GetNumColor() sdl.Color {
+    return f.numsColor
+}
+
 func (f *Font) GetSpaceBetween() int32 {
 	return f.spaceBetween
 }
+
 
 type Engine struct {
 	cache    *Cache
@@ -119,6 +126,11 @@ func (e *Engine) RenderCursor(cursorId int64) {
 		col := cur.Col
 		row := cur.Row - cur.ScreenHead.RowNumber
 		var padding int32
+
+        // add this CHECK [not shure]
+        if row < 0 || row >= e.cache.RectangleMatrix.Rows {
+            continue
+        }
 
 		if col == -1 {
 			col = 4 - leftBorder
@@ -150,7 +162,8 @@ func NewEngine(windowWidth, windowHeight int32,
 	fontFilename string,
 	fontSize int32,
 	fontSpaceBetween int32,
-	fontColor sdl.Color, windowTitle, supportedChars string) (*Engine, error) {
+	fontColor sdl.Color,
+    numsColor sdl.Color, windowTitle, supportedChars string) (*Engine, error) {
 
 	window, err := sdl.CreateWindow(windowTitle, sdl.WINDOWPOS_CENTERED, sdl.WINDOWPOS_CENTERED, windowWidth, windowHeight, sdl.WINDOW_SHOWN)
 
@@ -172,7 +185,7 @@ func NewEngine(windowWidth, windowHeight int32,
 		text:     textmanager.NewText(),
 	}
 
-	err = engine.SetFont(fontFilename, fontSize, fontSpaceBetween, fontColor)
+	err = engine.SetFont(fontFilename, fontSize, fontSpaceBetween, fontColor, numsColor)
 
 	if err != nil {
 		return nil, err
@@ -185,7 +198,7 @@ func NewEngine(windowWidth, windowHeight int32,
 	}
 
 	// TODO server.createCursor(id) ??
-	cur := textmanager.NewCursor(0, engine.cache.RectangleMatrix.Rows)
+	cur := textmanager.NewCursor(0, engine.cache.RectangleMatrix.Rows, engine.cache.RectangleMatrix.Columns)
 	cur.LineIter = engine.text.GetHead()
 	cur.CharIter = nil
 	cur.Color = 0x61A8DCFF
@@ -216,7 +229,7 @@ func (e *Engine) Stop() {
 	// TODO think about dele all text ???
 }
 
-func (e *Engine) SetFont(filename string, size int32, spaceBetween int32, color sdl.Color) error {
+func (e *Engine) SetFont(filename string, size int32, spaceBetween int32, color sdl.Color, numsColor sdl.Color) error {
 	ttfFont, err := ttf.OpenFont(filename, int(size))
 
 	if err != nil {
@@ -231,6 +244,7 @@ func (e *Engine) SetFont(filename string, size int32, spaceBetween int32, color 
 		filename:     filename,
 		size:         size,
 		color:        color,
+        numsColor:    numsColor,
 		ttfFont:      ttfFont,
 		spaceBetween: spaceBetween,
 	}
@@ -245,6 +259,7 @@ func (e *Engine) SetCache(supportedChars string) error {
 
 	cache := &Cache{}
 	cache.PreRenderredCharTextures = make(map[rune]CharTexture)
+	cache.PreRenderredNumsTextures = make(map[rune]CharTexture)
 
 	var (
 		mn     int32 = math.MaxInt32
@@ -260,6 +275,14 @@ func (e *Engine) SetCache(supportedChars string) error {
 		}
 		height = e.font.size
 	}
+
+    // cache all digits for rendering Numbers of Rows
+    for _, char := range "0123456789" {
+		numsSurface, _ := e.font.ttfFont.RenderUTF8Solid(string(char), e.font.GetNumColor())
+		texture, _ := e.renderer.CreateTextureFromSurface(numsSurface)
+		cache.PreRenderredNumsTextures[char] = CharTexture{texture, numsSurface.W}
+    }
+
 	var (
 		w, h    = e.window.GetSize()
 		rows    = h / height
@@ -295,7 +318,7 @@ func (e *Engine) Loop() {
 					break
 				}
                  println("Scancode: ", t.Keysym.Scancode)
-                
+
                 key := t.Keysym.Scancode
 
                 if key == sdl.SCANCODE_DELETE || key == sdl.SCANCODE_BACKSPACE {
@@ -379,7 +402,6 @@ func (e *Engine) InsertChar(value rune, cursorId int64) {
 	}
 }
 
-//TODO Поменять цвет нумерации строкч
 func (e *Engine) renderText(cursorId int64) {
 	e.renderer.Clear()
 	var (
@@ -460,33 +482,34 @@ func (e *Engine) renderText(cursorId int64) {
     cur := e.text.Cursors[cursorId]
     row = 0
     col = 3
-    X = e.font.GetSpaceBetween() * 3 + e.cache.PreRenderredCharTextures[rune('1')].Width * 3
+    X = (e.font.GetSpaceBetween() + e.cache.PreRenderredNumsTextures[rune('1')].Width) * 3
     Y = 0
     for num := cur.ScreenHead.RowNumber; num <= cur.ScreenTail.RowNumber; num++ {
         for cp := num; cp > 0; cp /= 10 {
-            e.GetRectFromMatrix(row, col).H = e.font.GetSize()
-            e.GetRectFromMatrix(row, col).W = e.cache.PreRenderredCharTextures[rune(cp % 10 + 48)].Width
-            e.GetRectFromMatrix(row, col).X = X
-            e.GetRectFromMatrix(row, col).Y = Y
-            e.renderer.Copy(e.cache.PreRenderredCharTextures[rune(cp % 10 + 48)].Texture, nil, e.GetRectFromMatrix(row, col))
-            X -= e.cache.PreRenderredCharTextures[rune(cp % 10 + 48)].Width + e.font.GetSpaceBetween()
-
-            col--
             if col < 0 {
                 println("Слишком длиный номер строки, лучше переписать код на микросервисы")
                 break
-            } 
+            }
+            e.GetRectFromMatrix(row, col).H = e.font.GetSize()
+            e.GetRectFromMatrix(row, col).W = e.cache.PreRenderredNumsTextures[DtoR(cp % 10)].Width
+            e.GetRectFromMatrix(row, col).X = X
+            e.GetRectFromMatrix(row, col).Y = Y
+            e.renderer.Copy(e.cache.PreRenderredNumsTextures[DtoR(cp % 10)].Texture, nil, e.GetRectFromMatrix(row, col))
+            X -= e.cache.PreRenderredNumsTextures[DtoR(cp % 10)].Width + e.font.GetSpaceBetween()
+
+            col--
+
         }
         if num == 0 {
             e.GetRectFromMatrix(row, col).H = e.font.GetSize()
-            e.GetRectFromMatrix(row, col).W = e.cache.PreRenderredCharTextures[rune(48)].Width
+            e.GetRectFromMatrix(row, col).W = e.cache.PreRenderredNumsTextures[rune(48)].Width
             e.GetRectFromMatrix(row, col).X = X
             e.GetRectFromMatrix(row, col).Y = Y
-            e.renderer.Copy(e.cache.PreRenderredCharTextures[rune(48)].Texture, nil, e.GetRectFromMatrix(row, col))
+            e.renderer.Copy(e.cache.PreRenderredNumsTextures[DtoR(0)].Texture, nil, e.GetRectFromMatrix(row, col))
 
         }
         Y += e.font.GetSize()
-        X = e.font.GetSpaceBetween() * 3 + e.cache.PreRenderredCharTextures[rune('1')].Width * 3
+        X = (e.font.GetSpaceBetween() + e.cache.PreRenderredNumsTextures[rune('1')].Width) * 3
         row++
         col = 3
     }
@@ -496,21 +519,30 @@ func (e *Engine) renderText(cursorId int64) {
 
 }
 
+// digit to rune
+func DtoR(n int32) rune {
+    if 0 <= n && n <= 9 {
+        return rune(48 + n)
+    }
+    return rune('0')
+}
+
 func main() {
 	var (
-		ScreenHeight int32  = 980
-		ScreenWidth  int32  = 1480
-		FontSize     int32  = 52
-		SpaceBetween int32  = 0
-		FontFilename string = "MonoNL-Regular.ttf"
-		FontColor    uint32 = 0xFF0000FF
-		WindowTitle  string = "Type2gether"
+		ScreenHeight    int32  = 980
+		ScreenWidth     int32  = 1480
+		FontSize        int32  = 24
+		SpaceBetween    int32  = 0
+		FontFilename    string = "MonoNL-Regular.ttf"
+		FontColor       uint32 = 0xFFFFFFFF
+		NumbersColor    uint32 = 0x34C136FF
+		WindowTitle     string = "Type2gether"
 	)
 
 	GUIStart()
 	defer GUIStop()
 
-	engine, err := NewEngine(ScreenWidth, ScreenHeight, FontFilename, FontSize, SpaceBetween, hexToSdlColor(FontColor), WindowTitle, AllSupportedChars)
+	engine, err := NewEngine(ScreenWidth, ScreenHeight, FontFilename, FontSize, SpaceBetween, hexToSdlColor(FontColor), hexToSdlColor(NumbersColor), WindowTitle, AllSupportedChars)
 
 	if err != nil {
 		panic(err)
@@ -518,3 +550,4 @@ func main() {
 
 	engine.Loop()
 }
+
