@@ -109,6 +109,7 @@ type Engine struct {
 	window   *sdl.Window
 	font     Font
 	text     *textmanager.Text
+    filename string
 }
 
 func (e *Engine) RenderCursor(cursorId int64) {
@@ -175,6 +176,11 @@ func NewEngine(windowWidth, windowHeight int32,
 	fontColor sdl.Color,
     numsColor sdl.Color, windowTitle, supportedChars string) (*Engine, error) {
 
+
+    if len(os.Args[1:]) < 1 {
+        return nil, errors.New("No file name. Nothing can be openned/saved")
+    }
+
 	window, err := sdl.CreateWindow(windowTitle, sdl.WINDOWPOS_CENTERED, sdl.WINDOWPOS_CENTERED, windowWidth, windowHeight, sdl.WINDOW_SHOWN)
 
 //    window.SetFullscreen(1)
@@ -216,6 +222,8 @@ func NewEngine(windowWidth, windowHeight int32,
 	cur.ScreenHead.LineIter = engine.text.GetHead()
 	cur.ScreenTail.LineIter = engine.text.GetTail()
 	engine.text.Cursors = append(engine.text.Cursors, cur)
+    // TODO add regular expr!!!
+    engine.filename = os.Args[1]
 	return engine, nil
 }
 
@@ -304,10 +312,33 @@ func (e *Engine) SetCache(supportedChars string) error {
 	return nil
 }
 
+func (e *Engine) LoadTextFromFile(cursorId int64) error {
+    str, err := filemanager.ReadFromFile(e.filename)
+    if err != nil {
+        return err
+    }
+    println(str)
+    err = e.text.Paste(str, cursorId)
+    if err != nil {
+        return err
+    }
+    e.text.SetCursorStartPosition(cursorId)
+    return nil
+}
+
+func (e *Engine) SaveTextToFile() error {
+    println(e.text.GetString())
+    return filemanager.SaveToFile(e.filename, e.text.GetString())
+}
+
 // TODO подумать о том, чтобы не ифать два раза а в EraseChar, InsertChar, MoveCursor передавать просто scancode
 func (e *Engine) Loop() {
 	running := true
     DEBUG_CUR_ID := int64(0)
+    err := e.LoadTextFromFile(DEBUG_CUR_ID)
+    if err != nil {
+        println(err)
+    }
 	e.renderText(DEBUG_CUR_ID)
 	for running {
 		for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
@@ -354,17 +385,10 @@ func (e *Engine) Loop() {
 		sdl.Delay(50)
 	}
 
-    err := SaveText(e.text.GetString())
+    err = e.SaveTextToFile()
     if err != nil {
         println(err)
     }
-}
-
-func SaveText(text string) error {
-    if len(os.Args[1:]) < 1 {
-        return errors.New("No file name. Nothing can be saved")
-    }
-    return filemanager.SaveToFile(os.Args[1], text)
 }
 
 func (e *Engine) MoveCursor(direction sdl.Scancode, cursorId int64) {
@@ -402,6 +426,7 @@ func (e *Engine) EraseChar(key sdl.Scancode, cursorId int64) {
     }
 }
 
+// TODO ифать \n и \t внутри самого InsertCharAfter!!!
 func (e *Engine) InsertChar(value rune, cursorId int64) {
 	//_ := e.text.Cursors[cursorId]
 	if value == '\n' {

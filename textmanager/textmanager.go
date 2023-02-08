@@ -118,10 +118,31 @@ func NewCursor(Id int64, ScreenRow, ScreenCol int32) *Cursor {
 	return c
 }
 
-// TODO сделать красиво
+/*
+// BAD function it broke down ALL scrolls
+func (t *Text) SetCursorStartPosition(cursorId int64) {
+    t.Cursors[cursorId].Row =  0
+    t.Cursors[cursorId].LineIter = t.GetHead()
+
+    t.Cursors[cursorId].Col = -1
+    t.Cursors[cursorId].CharIter = nil
+
+}
+*/
+
+// TODO сделать красиво =)
 //сделать откат строки, и ячейки если у нас не вставилась буква
 // строку откатываем, только если мы одновременно создаём строку и ячейку
 // иначе откатываем только ячейку
+
+func (t *Text) InsertCharBefore(cursorId int64, value rune) error {
+    err := t.InsertCharAfter(cursorId, value)
+    if err != nil {
+        return err
+    }
+    t.Cursors[cursorId].MoveLeft()
+    return nil
+}
 
 func (t *Text) InsertCharAfter(cursorId int64, value rune) error {
 	cur := t.Cursors[cursorId]
@@ -174,6 +195,28 @@ func (t *Text) InsertCharAfter(cursorId int64, value rune) error {
 	cur.CharIter = cur.CharIter.GetNext()
 	cur.Col++
 	return nil
+}
+
+// TODO validation
+func (t *Text) Paste(data string, cursorId int64) error {
+	//cur := t.Cursors[cursorId]
+    var err error
+    println("data: ", data)
+    // TODO замена на before и перевернуть цикл
+    for _, e := range data {
+        if e == '\n' {
+            println("\\n")
+            err = t.InsertLineAfter(cursorId)
+        } else {
+            err = t.InsertCharAfter(cursorId, e)
+        }
+
+        if err != nil {
+            return err
+        }
+    }
+
+    return nil
 }
 
 func (t *Text) InsertLineAfter(cursorId int64) error {
@@ -407,8 +450,10 @@ func (t *Text) GetString() string {
 			str += string(charIter.GetValue())
 			charIter = charIter.GetNext()
 		}
-		str += "\n"
 		iter = iter.GetNext()
+        if iter != nil {
+		    str += "\n"
+        }
 	}
 	////printtln("Original str: ", str)
 	return str
