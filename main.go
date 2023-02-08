@@ -117,13 +117,14 @@ func (e *Engine) RenderCursor(cursorId int64) {
     )
 
     leftBorder := e.text.Cursors[cursorId].ScreenLeft
-    println("LeftBorder: ", leftBorder)
+    //println("LeftBorder: ", leftBorder)
 
 	for i := 0; i < len(e.text.Cursors); i++ {
 		cur := e.text.Cursors[i]
 		//println("Cur head: ", cur.ScreenHead.RowNumber, "Cur tail: ", cur.ScreenTail.RowNumber)
 		e.renderer.SetDrawColor(hexToRBGA(cur.Color))
 		col := cur.Col
+// TODO отображать относительно Одного курсора, поэтому cur.ScreenHead.RowNumber не годится (относительно самого себя)
 		row := cur.Row - cur.ScreenHead.RowNumber
 		var padding int32
 
@@ -136,13 +137,21 @@ func (e *Engine) RenderCursor(cursorId int64) {
 			col = 4 - leftBorder
 			padding = 0
 		} else {
-            if col < leftBorder {
+            if col < leftBorder - 1 {
                 continue
             }
-            col -= leftBorder
-            col += 4
-			padding = e.GetRectFromMatrix(row, col).W
-		}
+            if col == leftBorder - 1 && leftBorder != 0 {
+                //println("\t\t\tLEFTBORDER")
+                col++
+			    padding = 0
+                col -= leftBorder
+                col += 4
+            } else {
+                col -= leftBorder
+                col += 4
+			    padding = e.GetRectFromMatrix(row, col).W
+            }
+        }
 		e.renderer.FillRect(&sdl.Rect{X: e.GetRectFromMatrix(row, col).X + padding, Y: e.GetRectFromMatrix(row, col).Y, W: 5, H: height})
 	}
 
@@ -317,7 +326,7 @@ func (e *Engine) Loop() {
 				if t.State != sdl.PRESSED {
 					break
 				}
-                 println("Scancode: ", t.Keysym.Scancode)
+                //println("Scancode: ", t.Keysym.Scancode)
 
                 key := t.Keysym.Scancode
 
@@ -417,22 +426,16 @@ func (e *Engine) renderText(cursorId int64) {
         delta int32 = e.text.Cursors[cursorId].Col - e.cache.RectangleMatrix.Columns + 2 + 4
 	)
 
-    println("delta:",  delta)
+    //println("delta:",  delta)
 
     leftBorder := e.text.Cursors[cursorId].ScreenLeft
-    println("LeftBorderText: ", leftBorder)
-    if e.text.Cursors[cursorId].Col <= leftBorder {
-        println("ths")
-        e.text.Cursors[cursorId].ScreenLeft = e.text.Cursors[cursorId].Col
-        if e.text.Cursors[cursorId].ScreenLeft == -1 {
-            e.text.Cursors[cursorId].ScreenLeft = 0
-        }
+    //println("LeftBorderText: ", leftBorder)
+    if e.text.Cursors[cursorId].Col < leftBorder {
+        e.text.Cursors[cursorId].ScreenLeft = e.text.Cursors[cursorId].Col + 1
         delta = e.text.Cursors[cursorId].ScreenLeft
     } else if delta >= leftBorder {
-        println("code")
         e.text.Cursors[cursorId].ScreenLeft = delta
     } else {
-        println("work")
         delta = leftBorder
     }
 
@@ -463,7 +466,7 @@ func (e *Engine) renderText(cursorId int64) {
             }
             continue
         }
-        println("col - del: ", col - delta, "c:", rune(c))
+        //println("col - del: ", col - delta, "c:", rune(c))
 		e.GetRectFromMatrix(row, col - delta).H = e.font.GetSize()
 		e.GetRectFromMatrix(row, col - delta).W = e.cache.PreRenderredCharTextures[rune(c)].Width
         e.GetRectFromMatrix(row, col - delta).X = X
@@ -531,7 +534,7 @@ func main() {
 	var (
 		ScreenHeight    int32  = 980
 		ScreenWidth     int32  = 1480
-		FontSize        int32  = 24
+		FontSize        int32  = 52
 		SpaceBetween    int32  = 0
 		FontFilename    string = "MonoNL-Regular.ttf"
 		FontColor       uint32 = 0xFFFFFFFF
