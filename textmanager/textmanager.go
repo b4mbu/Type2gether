@@ -24,11 +24,16 @@ type Cursor struct {
 	Row        int32
 	Col        int32
 	Color      uint32
+
+    ScreenLeft int32
+
 	ScreenHead *Border
 	ScreenTail *Border
 	ScreenRow  int32
+    ScreenCol  int32
 }
 
+//Эта структура нужна для скрола
 //Эта структура нужна для отрисовки нумерации строк
 type Border struct {
 	LineIter  *list.Node[*list.List[rune]]
@@ -75,6 +80,13 @@ func (cur *Cursor) ScrollDown() {
 	}
 }
 
+/*
+type Line struct {
+    Value       *list.List[rune]
+    IsNatural   bool
+    width       int32
+}
+*/
 type Text struct {
 	list.List[*list.List[rune]]
 	// скорее всего не нужен тк в List есть аттрибут lenght /  size      int64
@@ -93,13 +105,15 @@ func NewText() *Text {
 
 // TODO написать присвоение id для курсора
 // TODO на данном этапе при создании NewCursor просто всегда будем 0 в него передавать, когда будем писать серверную часть нужно будет определиться с созданием Id
-func NewCursor(Id int64, ScreenRow int32) *Cursor {
+func NewCursor(Id int64, ScreenRow, ScreenCol int32) *Cursor {
 	c := new(Cursor)
 	c.Row = 0
 	c.Col = -1
 	c.Id = Id
 	c.ScreenRow = ScreenRow
-	c.ScreenHead = &Border{RowNumber: 0}
+    c.ScreenCol = ScreenCol
+	c.ScreenLeft = 0
+    c.ScreenHead = &Border{RowNumber: 0}
 	c.ScreenTail = &Border{RowNumber: 0}
 	return c
 }
@@ -111,11 +125,11 @@ func NewCursor(Id int64, ScreenRow int32) *Cursor {
 
 func (t *Text) InsertCharAfter(cursorId int64, value rune) error {
 	cur := t.Cursors[cursorId]
-	println("insert char after", cur.Row, cur.Col)
+	//printtln("insert char after", cur.Row, cur.Col)
 
 	// эта штука не должна вызываться никогда
 	if cur.LineIter == nil {
-		println("Мужики, работяги, всё плохо. Юра, мы всё прое****, это условие не должно выполняться")
+		//printtln("Мужики, работяги, всё плохо. Юра, мы всё прое****, это условие не должно выполняться")
 		/* line := new(list.List[rune])
 		   err := line.PushBack(value)
 
@@ -142,7 +156,7 @@ func (t *Text) InsertCharAfter(cursorId int64, value rune) error {
 		err := cur.LineIter.GetValue().PushFront(value)
 
 		if err != nil {
-			println(err)
+			//printtln(err)
 			return err
 		}
 
@@ -166,7 +180,7 @@ func (t *Text) InsertLineAfter(cursorId int64) error {
 	cur := t.Cursors[cursorId]
 
 	if cur.LineIter == nil {
-		println("Мы не должны заходить в этот if ")
+		//printtln("Мы не должны заходить в этот if ")
 		return errors.New("Мы не должны заходить в этот if")
 	}
 
@@ -174,7 +188,7 @@ func (t *Text) InsertLineAfter(cursorId int64) error {
 		line := new(list.List[rune])
 		if cur.LineIter.GetValue().GetTail() != nil {
 			// line isn't empty
-			println("row & col", cur.Row, cur.Col)
+			//printtln("row & col", cur.Row, cur.Col)
 			err := t.InsertAfter(line, cur.LineIter)
 
 			if err != nil {
@@ -203,7 +217,7 @@ func (t *Text) InsertLineAfter(cursorId int64) error {
 			cur.CharIter = nil
 
 			// cur.ScrollDown()
-			println("head & tail", cur.ScreenHead.RowNumber, cur.ScreenTail.RowNumber)
+			//printtln("head & tail", cur.ScreenHead.RowNumber, cur.ScreenTail.RowNumber)
 
 			cur.Row++
 			cur.Col = -1
@@ -290,7 +304,7 @@ func (t *Text) RemoveCharBefore(cursorId int64) error {
 	cur := t.Cursors[cursorId]
 
 	if cur.LineIter == nil {
-		println("Press 'F', пацан к успеху шёл, Какой успех, раздался смех")
+		//printtln("Press 'F', пацан к успеху шёл, Какой успех, раздался смех")
 		return nil
 	}
 
@@ -359,6 +373,18 @@ func (t *Text) RemoveCharBefore(cursorId int64) error {
 	return nil
 }
 
+func (t *Text) RemoveCharAfter(cursorId int64) error {
+    cur := t.Cursors[cursorId]
+    oldCharIter := cur.CharIter
+    oldLineIter := cur.LineIter
+    cur.MoveRight()
+    if oldCharIter != cur.CharIter || oldLineIter != cur.LineIter  {
+        err := t.RemoveCharBefore(cursorId)
+        return err
+    }
+    return nil
+}
+
 // курсор не двигается!!
 func (t *Text) MergeLines(cursorId int64) error {
 	cur := t.Cursors[cursorId]
@@ -384,20 +410,20 @@ func (t *Text) GetString() string {
 		str += "\n"
 		iter = iter.GetNext()
 	}
-	//println("Original str: ", str)
+	////printtln("Original str: ", str)
 	return str
 }
 
 // TODO think about width
 func (t *Text) GetScreenString(cursorId int32) string {
 	cur := t.Cursors[cursorId]
-	println(cur.ScreenHead.LineIter, cur.ScreenTail.LineIter)
+	//printtln(cur.ScreenHead.LineIter, cur.ScreenTail.LineIter)
 	if cur.ScreenHead.LineIter == nil || cur.ScreenTail.LineIter == nil {
-		println("ScreenHead is nil")
+		//printtln("ScreenHead is nil")
 		return ""
 	}
 	ptr1 := cur.ScreenHead.LineIter
-	println(cur.ScreenHead, cur.ScreenTail)
+	//printtln(cur.ScreenHead, cur.ScreenTail)
 	res := ""
 	for ptr1 != nil && ptr1 != cur.ScreenTail.LineIter.GetNext() {
 		ptr2 := ptr1.GetValue().GetHead()
@@ -408,7 +434,7 @@ func (t *Text) GetScreenString(cursorId int32) string {
 		res += "\n"
 		ptr1 = ptr1.GetNext()
 	}
-	println("res: ", res)
+	//printtln("res: ", res)
 	return res
 }
 
@@ -523,111 +549,13 @@ func (cur *Cursor) MoveDown() {
 	cur.Col = cur.LineIter.GetValue().Index(cur.CharIter)
 }
 
-//func (cur *Cursor) ScrollUp() {
-//	if cur.ScreenTail.RowNumber-cur.ScreenHead.RowNumber+1 == cur.ScreenRow {
-//		println("here1")
-//		if cur.LineIter.GetNext() == cur.ScreenHead.LineIter {
-//			// Tail не должен быть равен nil, если Head не равен nil
-//			if cur.ScreenHead.LineIter.GetPrev() == nil || cur.ScreenTail.LineIter.GetPrev() == nil {
-//				return
-//			}
-//			cur.ScreenTail.LineIter = cur.ScreenTail.LineIter.GetPrev()
-//			cur.ScreenTail.RowNumber--
-//			cur.ScreenHead.LineIter = cur.ScreenHead.LineIter.GetPrev()
-//			cur.ScreenHead.RowNumber--
-//		} else {
-//			// Если мы попали в этот else, значит мы находимся на последней строке, и она поднимается наверх, а значит мы должны поменять ScreenTail
-//			cur.ScreenTail.LineIter = cur.ScreenTail.LineIter.GetPrev()
-//			cur.ScreenTail.RowNumber--
-//		}
-//	} else {
-//		println("here2")
-//		if cur.ScreenTail.LineIter.GetPrev() == cur.ScreenHead.LineIter {
-//			cur.ScreenTail.LineIter = cur.ScreenTail.LineIter.GetPrev()
-//		}
-//		cur.ScreenTail.RowNumber--
-//	}
-
-//	/* True ScrollUp
-//	   // Tail не должен быть равен nil, если Head не равен nil
-//	   if cur.ScreenHead.LineIter.GetPrev() == nil || cur.ScreenTail.LineIter.GetPrev() == nil {
-//	       return
-//	   }
-//	   cur.ScreenTail.LineIter = cur.ScreenTail.LineIter.GetPrev()
-//	   cur.ScreenTail.RowNumber--
-//	   cur.ScreenHead.LineIter = cur.ScreenHead.LineIter.GetPrev()
-//	   cur.ScreenHead.RowNumber--
-//	*/
-//}
-
-//func (cur *Cursor) ScrollDown() {
-//	println(cur.ScreenHead.RowNumber, cur.ScreenTail.RowNumber)
-//	if cur.ScreenTail.RowNumber-cur.ScreenHead.RowNumber+1 == cur.ScreenRow {
-//		//ЭТО НЕ КОСТЫЛЬ, это швабра, которая поддерживает потолок
-//		if cur.LineIter.GetPrev() == cur.ScreenTail.LineIter {
-//			// Head не должен быть равен nil, если Tail не равен nil
-//			if cur.ScreenHead.LineIter.GetNext() == nil || cur.ScreenTail.LineIter.GetNext() == nil {
-//				return
-//			}
-//			cur.ScreenTail.LineIter = cur.ScreenTail.LineIter.GetNext()
-//			cur.ScreenTail.RowNumber++
-//			cur.ScreenHead.LineIter = cur.ScreenHead.LineIter.GetNext()
-//			cur.ScreenHead.RowNumber++
-
-//		} else {
-//			// Если мы попали в этот else, то мы находимся в середине текста, нам нужно сделать ScrollDown, но нужно поменять только ScreenTail, Причём важно, что не нужно менять RowNumber
-//			cur.ScreenTail.LineIter = cur.ScreenTail.LineIter.GetPrev()
-//		}
-//	} else {
-//		println("aboba", cur.ScreenHead.RowNumber, cur.ScreenTail.RowNumber)
-//		cur.ScreenTail.LineIter = cur.ScreenTail.LineIter.GetNext()
-//		cur.ScreenTail.RowNumber++
-//	}
-//	/* Это тру scrollDown
-//	   // Head не должен быть равен nil, если Tail не равен nil
-//	   if cur.ScreenHead.LineIter.GetNext() == nil || cur.ScreenTail.LineIter.GetNext() == nil {
-//	       return
-//	   }
-//	   cur.ScreenTail.LineIter = cur.ScreenTail.LineIter.GetNext()
-//	   cur.ScreenTail.RowNumber++
-//	   cur.ScreenHead.LineIter = cur.ScreenHead.LineIter.GetNext()
-//	   cur.ScreenHead.RowNumber++
-//	*/
-//}
-
-/*
-func CreateTextFromFile(reader *bufio.Reader) *Cursor{ // TODO: add error
-    cursor := CreateCursor()
-    //fmt.Println("cursor was created succ")
-    for {
-        textLine, err := reader.ReadString(endl)
-        for _, c := range textLine {
-            cursor.InsertCharBefore(c)
-          // cursor.InsertCharAfter(c)
-           //cursor.Right()
-        }
-        if err == io.EOF {
-            return cursor
-        }
-
-        cursor.InsertLineAfter()
-        cursor.Down()
-
-    }
-    return cursor
+func (cur *Cursor) MoveHome() {
+    cur.CharIter = nil
+    cur.Col = -1
 }
 
-func (t *Text) GetTextAsLine() string {
-    res := ""hea
-    linePtr := t.head
-    for linePtr != nil {
-        charPtr := linePtr.value
-        for charPtr != nil {
-            res += string(charPtr.value)
-            charPtr = charPtr.next
-        }
-        linePtr = linePtr.next
-    }
-    return res
+func (cur *Cursor) MoveEnd() {
+    cur.CharIter = cur.LineIter.GetValue().GetTail()
+    cur.Col = cur.LineIter.GetValue().Length() - 1
 }
-*/
+
