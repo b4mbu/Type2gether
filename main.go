@@ -4,7 +4,8 @@ import (
 	"Type2gether/textmanager"
 	"errors"
 	"math"
-
+    "Type2gether/filemanager"
+    "os"
 	"github.com/veandco/go-sdl2/sdl"
 	"github.com/veandco/go-sdl2/ttf"
 )
@@ -352,6 +353,18 @@ func (e *Engine) Loop() {
 		}
 		sdl.Delay(50)
 	}
+
+    err := SaveText(e.text.GetString())
+    if err != nil {
+        println(err)
+    }
+}
+
+func SaveText(text string) error {
+    if len(os.Args[1:]) < 1 {
+        return errors.New("No file name. Nothing can be saved")
+    }
+    return filemanager.SaveToFile(os.Args[1], text)
 }
 
 func (e *Engine) MoveCursor(direction sdl.Scancode, cursorId int64) {
