@@ -200,7 +200,7 @@ func NewEngine(windowWidth, windowHeight int32,
 		sdl.WINDOW_SHOWN|sdl.WINDOW_ALLOW_HIGHDPI,
 	)
 
-	//    window.SetFullscreen(1)
+	window.SetFullscreen(1)
 
 	if err != nil {
 		return nil, err
@@ -690,15 +690,15 @@ func DtoR(n int32) rune {
 
 func main() {
 	var (
-		ScreenHeight               int32  = 720
-		ScreenWidth                int32  = 1280
+		ScreenHeight               int32  = 1080
+		ScreenWidth                int32  = 1920
 		FontSize                   int32  = 30 // in px!
 		SpaceBetween               int32  = 0
 		FontFilename               string = "MonoNL-Regular.ttf"
 		FontColor                  uint32 = 0xFFFFFFFF
-		LineNumbersColor           uint32 = 0xA4031FFF
-		LineNumbersBackgroundColor uint32 = 0x568EA3FF
-		TextBackgroundColor        uint32 = 0x568EA3FF
+		LineNumbersColor           uint32 = 0xbd93f9FF
+		LineNumbersBackgroundColor uint32 = 0x44475aFF
+		TextBackgroundColor        uint32 = 0x282a36FF
 		CursorColor                uint32 = 0xDAD2D8FF
 		WindowTitle                string = "Type2gether"
 	)
