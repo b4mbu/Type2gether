@@ -18,19 +18,19 @@ const (
 // все вызовы остаются, как прежде
 
 type Cursor struct {
-	LineIter   *list.Node[*list.List[rune]]
-	CharIter   *list.Node[rune]
-	Id         int64
-	Row        int32
-	Col        int32
-	Color      uint32
+	LineIter *list.Node[*list.List[rune]]
+	CharIter *list.Node[rune]
+	Id       int64
+	Row      int32
+	Col      int32
+	Color    uint32
 
-    ScreenLeft int32
+	ScreenLeft int32
 
 	ScreenHead *Border
 	ScreenTail *Border
 	ScreenRow  int32
-    ScreenCol  int32
+	ScreenCol  int32
 }
 
 //Эта структура нужна для скрола
@@ -111,24 +111,21 @@ func NewCursor(Id int64, ScreenRow, ScreenCol int32) *Cursor {
 	c.Col = -1
 	c.Id = Id
 	c.ScreenRow = ScreenRow
-    c.ScreenCol = ScreenCol
+	c.ScreenCol = ScreenCol
 	c.ScreenLeft = 0
-    c.ScreenHead = &Border{RowNumber: 0}
+	c.ScreenHead = &Border{RowNumber: 0}
 	c.ScreenTail = &Border{RowNumber: 0}
 	return c
 }
 
-/*
-// BAD function it broke down ALL scrolls
 func (t *Text) SetCursorStartPosition(cursorId int64) {
-    t.Cursors[cursorId].Row =  0
-    t.Cursors[cursorId].LineIter = t.GetHead()
-
-    t.Cursors[cursorId].Col = -1
-    t.Cursors[cursorId].CharIter = nil
-
+	cursor := t.Cursors[cursorId]
+	cursor.Row = 0
+	cursor.Col = -1
+	cursor.ScreenLeft = 0
+	cursor.ScreenHead = &Border{RowNumber: 0}
+	cursor.ScreenTail = &Border{RowNumber: 0}
 }
-*/
 
 // TODO сделать красиво =)
 //сделать откат строки, и ячейки если у нас не вставилась буква
@@ -136,12 +133,12 @@ func (t *Text) SetCursorStartPosition(cursorId int64) {
 // иначе откатываем только ячейку
 
 func (t *Text) InsertCharBefore(cursorId int64, value rune) error {
-    err := t.InsertCharAfter(cursorId, value)
-    if err != nil {
-        return err
-    }
-    t.Cursors[cursorId].MoveLeft()
-    return nil
+	err := t.InsertCharAfter(cursorId, value)
+	if err != nil {
+		return err
+	}
+	t.Cursors[cursorId].MoveLeft()
+	return nil
 }
 
 func (t *Text) InsertCharAfter(cursorId int64, value rune) error {
@@ -200,23 +197,23 @@ func (t *Text) InsertCharAfter(cursorId int64, value rune) error {
 // TODO validation
 func (t *Text) Paste(data string, cursorId int64) error {
 	//cur := t.Cursors[cursorId]
-    var err error
-    println("data: ", data)
-    // TODO замена на before и перевернуть цикл
-    for _, e := range data {
-        if e == '\n' {
-            println("\\n")
-            err = t.InsertLineAfter(cursorId)
-        } else {
-            err = t.InsertCharAfter(cursorId, e)
-        }
+	var err error
+	println("data: ", data)
+	// TODO замена на before и перевернуть цикл
+	for _, e := range data {
+		if e == '\n' {
+			println("\\n")
+			err = t.InsertLineAfter(cursorId)
+		} else {
+			err = t.InsertCharAfter(cursorId, e)
+		}
 
-        if err != nil {
-            return err
-        }
-    }
+		if err != nil {
+			return err
+		}
+	}
 
-    return nil
+	return nil
 }
 
 func (t *Text) InsertLineAfter(cursorId int64) error {
@@ -417,15 +414,15 @@ func (t *Text) RemoveCharBefore(cursorId int64) error {
 }
 
 func (t *Text) RemoveCharAfter(cursorId int64) error {
-    cur := t.Cursors[cursorId]
-    oldCharIter := cur.CharIter
-    oldLineIter := cur.LineIter
-    cur.MoveRight()
-    if oldCharIter != cur.CharIter || oldLineIter != cur.LineIter  {
-        err := t.RemoveCharBefore(cursorId)
-        return err
-    }
-    return nil
+	cur := t.Cursors[cursorId]
+	oldCharIter := cur.CharIter
+	oldLineIter := cur.LineIter
+	cur.MoveRight()
+	if oldCharIter != cur.CharIter || oldLineIter != cur.LineIter {
+		err := t.RemoveCharBefore(cursorId)
+		return err
+	}
+	return nil
 }
 
 // курсор не двигается!!
@@ -451,9 +448,9 @@ func (t *Text) GetString() string {
 			charIter = charIter.GetNext()
 		}
 		iter = iter.GetNext()
-        if iter != nil {
-		    str += "\n"
-        }
+		if iter != nil {
+			str += "\n"
+		}
 	}
 	////printtln("Original str: ", str)
 	return str
@@ -595,12 +592,11 @@ func (cur *Cursor) MoveDown() {
 }
 
 func (cur *Cursor) MoveHome() {
-    cur.CharIter = nil
-    cur.Col = -1
+	cur.CharIter = nil
+	cur.Col = -1
 }
 
 func (cur *Cursor) MoveEnd() {
-    cur.CharIter = cur.LineIter.GetValue().GetTail()
-    cur.Col = cur.LineIter.GetValue().Length() - 1
+	cur.CharIter = cur.LineIter.GetValue().GetTail()
+	cur.Col = cur.LineIter.GetValue().Length() - 1
 }
-
