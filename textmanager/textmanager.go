@@ -119,12 +119,22 @@ func NewCursor(Id int64, ScreenRow, ScreenCol int32) *Cursor {
 }
 
 func (t *Text) SetCursorStartPosition(cursorId int64) {
-	cursor := t.Cursors[cursorId]
-	cursor.Row = 0
-	cursor.Col = -1
-	cursor.ScreenLeft = 0
-	cursor.ScreenHead = &Border{RowNumber: 0}
-	cursor.ScreenTail = &Border{RowNumber: 0}
+	cur := t.Cursors[cursorId]
+	cur.Row = 0
+	cur.LineIter = t.GetHead()
+
+	cur.Col = -1
+	cur.CharIter = nil
+
+	cur.ScreenLeft = 0
+	cur.ScreenHead = &Border{LineIter: t.GetHead(), RowNumber: 0} // Егор сказал, что выстрелит, но куда... (создаем новый объект, а не меняем старый)
+
+	cur.ScreenTail = &Border{LineIter: t.GetHead(), RowNumber: 0}
+	for i := 1; i < int(t.Cursors[cursorId].ScreenRow); i++ {
+		if err := cur.ScreenTail.Down(); err != nil {
+			return
+		}
+	}
 }
 
 // TODO сделать красиво =)
@@ -143,32 +153,6 @@ func (t *Text) InsertCharBefore(cursorId int64, value rune) error {
 
 func (t *Text) InsertCharAfter(cursorId int64, value rune) error {
 	cur := t.Cursors[cursorId]
-	//printtln("insert char after", cur.Row, cur.Col)
-
-	// эта штука не должна вызываться никогда
-	if cur.LineIter == nil {
-		//printtln("Мужики, работяги, всё плохо. Юра, мы всё прое****, это условие не должно выполняться")
-		/* line := new(list.List[rune])
-		   err := line.PushBack(value)
-
-		   if err != nil {
-		       return err
-		   }
-
-		   err = t.PushBack(line)
-
-		   if err != nil {
-		       return err
-		   }
-
-		   cur.LineIter = t.GetHead()
-		   cur.CharIter = line.GetHead()
-		   cur.Col = 0
-		   cur.Row = 0
-
-		   return nil
-		*/
-	}
 
 	if cur.CharIter == nil {
 		err := cur.LineIter.GetValue().PushFront(value)
@@ -219,16 +203,10 @@ func (t *Text) Paste(data string, cursorId int64) error {
 func (t *Text) InsertLineAfter(cursorId int64) error {
 	cur := t.Cursors[cursorId]
 
-	if cur.LineIter == nil {
-		//printtln("Мы не должны заходить в этот if ")
-		return errors.New("Мы не должны заходить в этот if")
-	}
-
 	if cur.CharIter == nil {
 		line := new(list.List[rune])
 		if cur.LineIter.GetValue().GetTail() != nil {
 			// line isn't empty
-			//printtln("row & col", cur.Row, cur.Col)
 			err := t.InsertAfter(line, cur.LineIter)
 
 			if err != nil {

@@ -191,7 +191,14 @@ func NewEngine(windowWidth, windowHeight int32,
 		return nil, errors.New("no filename provided")
 	}
 
-	window, err := sdl.CreateWindow(windowTitle, sdl.WINDOWPOS_CENTERED, sdl.WINDOWPOS_CENTERED, windowWidth, windowHeight, sdl.WINDOW_SHOWN|sdl.WINDOW_OPENGL)
+	window, err := sdl.CreateWindow(
+		windowTitle,
+		sdl.WINDOWPOS_CENTERED,
+		sdl.WINDOWPOS_CENTERED,
+		windowWidth,
+		windowHeight,
+		sdl.WINDOW_SHOWN|sdl.WINDOW_ALLOW_HIGHDPI,
+	)
 
 	//    window.SetFullscreen(1)
 
@@ -397,7 +404,7 @@ func (e *Engine) LoadTextFromFile(cursorId int64) error {
 	if err != nil {
 		return err
 	}
-	// e.text.SetCursorStartPosition(cursorId)
+	e.text.SetCursorStartPosition(cursorId)
 	return nil
 }
 
@@ -460,10 +467,10 @@ func (e *Engine) Loop() {
 		sdl.Delay(50)
 	}
 
-	// err = e.SaveTextToFile()
-	// if err != nil {
-	// 	println(err)
-	// }
+	err = e.SaveTextToFile()
+	if err != nil {
+		println(err)
+	}
 }
 
 func (e *Engine) MoveCursor(direction sdl.Scancode, cursorId int64) {
