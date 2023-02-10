@@ -199,8 +199,10 @@ func NewEngine(windowWidth, windowHeight int32,
 		windowHeight,
 		sdl.WINDOW_SHOWN|sdl.WINDOW_ALLOW_HIGHDPI,
 	)
+    // window.SetResizable(true)
+    // window.SetPosition(0, 0)
 
-	window.SetFullscreen(1)
+	// window.SetFullscreen(1)
 
 	if err != nil {
 		return nil, err
