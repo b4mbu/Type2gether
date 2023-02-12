@@ -345,7 +345,7 @@ func getScaleFactor(fontFilename string) (float32, error) {
 	var maxH int32 = 0
 
 	for _, c := range AllSupportedChars {
-		surface, err := ttfFont.RenderGlyphBlended(c, sdl.Color{0, 0, 0, 0})
+        surface, err := ttfFont.RenderGlyphBlended(c, sdl.Color{R: 0, G: 0, B: 0, A: 0})
 		if err != nil {
 			return 1, err
 		}
@@ -519,24 +519,9 @@ func (e *Engine) EraseChar(key sdl.Scancode, cursorId int64) {
 
 // TODO ифать \n и \t внутри самого InsertCharAfter!!!
 func (e *Engine) InsertChar(value rune, cursorId int64) {
-	//_ := e.text.Cursors[cursorId]
-	if value == '\n' {
-		err := e.text.InsertLineAfter(cursorId)
-		if err != nil {
-			//println(err)
-		}
-	} else if value == '\t' {
-		for i := 0; i < 4; i++ {
-			e.InsertChar(' ', cursorId)
-		}
-
-	} else {
-		//if cur.LineIter.GetValue().Length()+1 < e.cache.RectangleMatrix.Columns {
-		err := e.text.InsertCharAfter(cursorId, value)
-		if err != nil {
-			//println(err)
-		}
-		//}
+	err := e.text.InsertCharAfter(cursorId, value)
+	if err != nil {
+		println(err)
 	}
 }
 
@@ -549,10 +534,11 @@ func (e *Engine) renderText(cursorId int64) {
 		Y           int32 = 0
 		row         int32 = 0
 		// тут col равен 4 потому что мы 4 колоноки оставляем под нумерацию
-		col int32 = 4
+		//col int32 = 4
 		// TODO относительные координаты курсора от экрана
 
 		delta int32 = e.text.Cursors[cursorId].Col - e.cache.RectangleMatrix.Columns + 2 + 4
+        col int32 = 4
 	)
 
 	e.renderBackground(paddingLeft)
@@ -572,14 +558,16 @@ func (e *Engine) renderText(cursorId int64) {
 	if delta < 0 {
 		delta = 0
 	}
+    
+    col += delta
 
-	for _, c := range e.text.GetScreenString(0) {
+	for _, c := range e.text.GetVisibleTextPart(0) {
 		if col-4 < delta {
 			if c == '\n' {
 				Y += e.font.GetSize()
 				X = paddingLeft + e.font.GetSpaceBetween()
 				row++
-				col = 4
+				col = 4 + delta
 			} else {
 				col++
 			}
@@ -590,7 +578,7 @@ func (e *Engine) renderText(cursorId int64) {
 				Y += e.font.GetSize()
 				X = paddingLeft + e.font.GetSpaceBetween()
 				row++
-				col = 4
+				col = 4 + delta
 			} else {
 				col++
 			}
@@ -608,7 +596,7 @@ func (e *Engine) renderText(cursorId int64) {
 			Y += e.font.GetSize()
 			X = paddingLeft + e.font.GetSpaceBetween()
 			row++
-			col = 4
+			col = 4 + delta
 		}
 	}
 
@@ -699,8 +687,8 @@ func DtoR(n int32) rune {
 
 func main() {
 	var (
-		ScreenHeight               int32  = 1080
-		ScreenWidth                int32  = 1920
+		ScreenHeight               int32  = 720
+		ScreenWidth                int32  = 1280
 		FontSize                   int32  = 30 // in px!
 		SpaceBetween               int32  = 0
 		FontFilename               string = "MonoNL-Regular.ttf"

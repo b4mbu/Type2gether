@@ -28,6 +28,19 @@ type Cursor struct {
 	ScreenCol  int32
 }
 
+func NewCursor(Id int64, ScreenRow, ScreenCol int32) *Cursor {
+	c := new(Cursor)
+	c.Row = 0
+	c.Col = -1
+	c.Id = Id
+	c.ScreenRow = ScreenRow
+	c.ScreenCol = ScreenCol
+	c.ScreenLeft = 0
+	c.ScreenHead = &Border{RowNumber: 0}
+	c.ScreenTail = &Border{RowNumber: 0}
+	return c
+}
+
 type Border struct {
 	/* Эта структура нужна для скрола
 	   Эта структура нужна для отрисовки нумерации строк */
@@ -83,6 +96,108 @@ func (cur *Cursor) ScrollDown() {
 	}
 }
 
+func (cur *Cursor) MoveLeft() {
+	if cur.CharIter == nil {
+		if cur.LineIter.GetPrev() == nil {
+			return
+		}
+
+		if cur.ScreenHead.LineIter == cur.LineIter {
+			if cur.ScreenTail.RowNumber-cur.ScreenHead.RowNumber+1 >= cur.ScreenRow {
+				cur.ScrollUp()
+			} else {
+				cur.ScreenHead.Up()
+			}
+		}
+
+        cur.SetPosition(cur.LineIter.GetPrev(), cur.LineIter.GetPrev().GetValue().GetTail(), cur.Row-1, cur.LineIter.GetPrev().GetValue().Length()-1) 
+		return
+	}
+    
+    cur.SetPosition(cur.LineIter, cur.CharIter.GetPrev(), cur.Row, cur.Col-1)
+}
+
+func (cur *Cursor) MoveRight() {
+	if cur.CharIter == nil {
+		if cur.LineIter.GetValue().GetHead() == nil {
+			if cur.LineIter.GetNext() == nil {
+				return
+			}
+
+			if cur.ScreenTail.LineIter == cur.LineIter {
+				if cur.ScreenTail.RowNumber-cur.ScreenHead.RowNumber+1 >= cur.ScreenRow {
+					cur.ScrollDown()
+				}
+			}
+            cur.SetPosition(cur.LineIter.GetNext(), nil, cur.Row+1, -1)
+			return
+		}
+        cur.SetPosition(cur.LineIter, cur.LineIter.GetValue().GetHead(), cur.Row, 0)
+		return
+	}
+
+	if cur.CharIter == cur.LineIter.GetValue().GetTail() {
+		if cur.LineIter.GetNext() == nil {
+			return
+		}
+
+		if cur.ScreenTail.LineIter == cur.LineIter {
+			if cur.ScreenTail.RowNumber-cur.ScreenHead.RowNumber+1 >= cur.ScreenRow {
+				cur.ScrollDown()
+			}
+		}
+        cur.SetPosition(cur.LineIter.GetNext(), nil, cur.Row+1, -1)
+		return
+	}
+    cur.SetPosition(cur.LineIter, cur.CharIter.GetNext(), cur.Row, cur.Col+1)
+}
+
+func (cur *Cursor) MoveUp() {
+	if cur.LineIter.GetPrev() == nil {
+		return
+	}
+
+	if cur.ScreenHead.LineIter == cur.LineIter {
+		if cur.ScreenTail.RowNumber-cur.ScreenHead.RowNumber+1 >= cur.ScreenRow {
+			cur.ScrollUp()
+		} else {
+			cur.ScreenHead.Up()
+		}
+	}
+
+	index := cur.LineIter.GetValue().Index(cur.CharIter)
+	cur.CharIter = cur.LineIter.GetPrev().GetValue().GetNodeByIndex(index)
+	cur.LineIter = cur.LineIter.GetPrev()
+	cur.Row--
+	cur.Col = cur.LineIter.GetValue().Index(cur.CharIter)
+}
+
+func (cur *Cursor) MoveDown() {
+	if cur.LineIter.GetNext() == nil {
+		return
+	}
+
+	if cur.ScreenTail.LineIter == cur.LineIter {
+		if cur.ScreenTail.RowNumber-cur.ScreenHead.RowNumber+1 >= cur.ScreenRow {
+			cur.ScrollDown()
+		}
+	}
+
+	index := cur.LineIter.GetValue().Index(cur.CharIter)
+	cur.CharIter = cur.LineIter.GetNext().GetValue().GetNodeByIndex(index)
+	cur.LineIter = cur.LineIter.GetNext()
+	cur.Row++
+	cur.Col = cur.LineIter.GetValue().Index(cur.CharIter)
+}
+
+func (cur *Cursor) MoveHome() {
+    cur.SetPosition(cur.LineIter, nil, cur.Row, -1)
+}
+
+func (cur *Cursor) MoveEnd() {
+    cur.SetPosition(cur.LineIter, cur.LineIter.GetValue().GetTail(), cur.Row, cur.LineIter.GetValue().Length()-1)
+}
+
 type Text struct {
 	list.List[*list.List[rune]]
 	Cursors []*Cursor
@@ -92,19 +207,6 @@ func NewText() *Text {
 	t := new(Text)
 	t.PushBack(new(list.List[rune]))
 	return t
-}
-
-func NewCursor(Id int64, ScreenRow, ScreenCol int32) *Cursor {
-	c := new(Cursor)
-	c.Row = 0
-	c.Col = -1
-	c.Id = Id
-	c.ScreenRow = ScreenRow
-	c.ScreenCol = ScreenCol
-	c.ScreenLeft = 0
-	c.ScreenHead = &Border{RowNumber: 0}
-	c.ScreenTail = &Border{RowNumber: 0}
-	return c
 }
 
 func (t *Text) SetCursorStartPosition(cursorId int64) {
@@ -134,6 +236,14 @@ func (t *Text) InsertCharBefore(cursorId int64, value rune) error {
 func (t *Text) InsertCharAfter(cursorId int64, value rune) error {
 	cur := t.Cursors[cursorId]
 
+    if value == '\n' {
+        return t.InsertLineAfter(cursorId)
+    } else if value == '\t' {
+        for i := 0; i < 4; i++ {
+            t.InsertCharAfter(cursorId, ' ')
+        }
+    }
+
 	if cur.CharIter == nil {
 		err := cur.LineIter.GetValue().PushFront(value)
 
@@ -159,11 +269,7 @@ func (t *Text) InsertCharAfter(cursorId int64, value rune) error {
 func (t *Text) Paste(data string, cursorId int64) error {
 	var err error
 	for _, c := range data {
-		if c == '\n' {
-			err = t.InsertLineAfter(cursorId)
-		} else {
-			err = t.InsertCharAfter(cursorId, c)
-		}
+		err = t.InsertCharAfter(cursorId, c)
 
 		if err != nil {
 			return err
@@ -341,8 +447,8 @@ func (t *Text) RemoveCharAfter(cursorId int64) error {
 	return nil
 }
 
-// курсор не двигается!!
 func (t *Text) MergeLines(cursorId int64) error {
+    /* Be careful cursor does not move */
 	cur := t.Cursors[cursorId]
 	if cur.LineIter.GetPrev() == nil {
 		return errors.New("there is no previous line")
@@ -354,7 +460,7 @@ func (t *Text) MergeLines(cursorId int64) error {
 	return t.Remove(cur.LineIter)
 }
 
-func (t *Text) GetString() string {
+func (t *Text) GetFullText() string {
 	str := ""
 	iter := t.GetHead()
 	for iter != nil {
@@ -368,151 +474,32 @@ func (t *Text) GetString() string {
 			str += "\n"
 		}
 	}
-	////printtln("Original str: ", str)
 	return str
 }
 
-// TODO think about width
-func (t *Text) GetScreenString(cursorId int32) string {
+func (t *Text) GetVisibleTextPart(cursorId int32) string {
 	cur := t.Cursors[cursorId]
-	//printtln(cur.ScreenHead.LineIter, cur.ScreenTail.LineIter)
 	if cur.ScreenHead.LineIter == nil || cur.ScreenTail.LineIter == nil {
-		//printtln("ScreenHead is nil")
 		return ""
 	}
 	ptr1 := cur.ScreenHead.LineIter
-	//printtln(cur.ScreenHead, cur.ScreenTail)
 	res := ""
 	for ptr1 != nil && ptr1 != cur.ScreenTail.LineIter.GetNext() {
 		ptr2 := ptr1.GetValue().GetHead()
-		for ptr2 != nil {
+        var j int32 = 0
+        for ptr2 != nil && j < cur.ScreenLeft {
+            j++
+            ptr2 = ptr2.GetNext()
+        }
+        j = 0
+		for ptr2 != nil && j <= cur.ScreenCol {
 			res += string(ptr2.GetValue())
 			ptr2 = ptr2.GetNext()
-		}
+            j++
+        }
 		res += "\n"
 		ptr1 = ptr1.GetNext()
 	}
-	//printtln("res: ", res)
 	return res
 }
 
-func (cur *Cursor) MoveLeft() {
-	if cur.CharIter == nil {
-		if cur.LineIter.GetPrev() == nil {
-			return
-		}
-
-		if cur.ScreenHead.LineIter == cur.LineIter {
-			if cur.ScreenTail.RowNumber-cur.ScreenHead.RowNumber+1 >= cur.ScreenRow {
-				cur.ScrollUp()
-			} else {
-				cur.ScreenHead.Up()
-			}
-		}
-
-		cur.LineIter = cur.LineIter.GetPrev()
-		cur.CharIter = cur.LineIter.GetValue().GetTail()
-		cur.Row--
-
-		cur.Col = cur.LineIter.GetValue().Length() - 1
-		return
-	}
-
-	cur.CharIter = cur.CharIter.GetPrev()
-	cur.Col--
-}
-
-func (cur *Cursor) MoveRight() {
-	if cur.CharIter == nil {
-		if cur.LineIter.GetValue().GetHead() == nil {
-			if cur.LineIter.GetNext() == nil {
-				return
-			}
-
-			if cur.ScreenTail.LineIter == cur.LineIter {
-				if cur.ScreenTail.RowNumber-cur.ScreenHead.RowNumber+1 >= cur.ScreenRow {
-					cur.ScrollDown()
-				}
-			}
-
-			cur.LineIter = cur.LineIter.GetNext()
-			cur.CharIter = nil
-			cur.Row++
-			cur.Col = -1
-			return
-		}
-
-		cur.CharIter = cur.LineIter.GetValue().GetHead()
-		cur.Col = 0
-		return
-	}
-
-	if cur.CharIter == cur.LineIter.GetValue().GetTail() {
-		if cur.LineIter.GetNext() == nil {
-			return
-		}
-
-		if cur.ScreenTail.LineIter == cur.LineIter {
-			if cur.ScreenTail.RowNumber-cur.ScreenHead.RowNumber+1 >= cur.ScreenRow {
-				cur.ScrollDown()
-			}
-		}
-
-		cur.LineIter = cur.LineIter.GetNext()
-		cur.CharIter = nil
-		cur.Row++
-		cur.Col = -1
-		return
-	}
-
-	cur.CharIter = cur.CharIter.GetNext()
-	cur.Col++
-}
-
-func (cur *Cursor) MoveUp() {
-	if cur.LineIter.GetPrev() == nil {
-		return
-	}
-
-	if cur.ScreenHead.LineIter == cur.LineIter {
-		if cur.ScreenTail.RowNumber-cur.ScreenHead.RowNumber+1 >= cur.ScreenRow {
-			cur.ScrollUp()
-		} else {
-			cur.ScreenHead.Up()
-		}
-	}
-
-	index := cur.LineIter.GetValue().Index(cur.CharIter)
-	cur.CharIter = cur.LineIter.GetPrev().GetValue().GetNodeByIndex(index)
-	cur.LineIter = cur.LineIter.GetPrev()
-	cur.Row--
-	cur.Col = cur.LineIter.GetValue().Index(cur.CharIter)
-}
-
-func (cur *Cursor) MoveDown() {
-	if cur.LineIter.GetNext() == nil {
-		return
-	}
-
-	if cur.ScreenTail.LineIter == cur.LineIter {
-		if cur.ScreenTail.RowNumber-cur.ScreenHead.RowNumber+1 >= cur.ScreenRow {
-			cur.ScrollDown()
-		}
-	}
-
-	index := cur.LineIter.GetValue().Index(cur.CharIter)
-	cur.CharIter = cur.LineIter.GetNext().GetValue().GetNodeByIndex(index)
-	cur.LineIter = cur.LineIter.GetNext()
-	cur.Row++
-	cur.Col = cur.LineIter.GetValue().Index(cur.CharIter)
-}
-
-func (cur *Cursor) MoveHome() {
-	cur.CharIter = nil
-	cur.Col = -1
-}
-
-func (cur *Cursor) MoveEnd() {
-	cur.CharIter = cur.LineIter.GetValue().GetTail()
-	cur.Col = cur.LineIter.GetValue().Length() - 1
-}
