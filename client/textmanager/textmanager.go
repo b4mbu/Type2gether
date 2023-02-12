@@ -258,78 +258,75 @@ func (t *Text) InsertLineAfterScroll(cur *Cursor) {
 	}
 }
 
-// TODO cur.CharIter == nil не значит, что строка пустая || Нужно проверить везде в коде это
 func (t *Text) RemoveCharBefore(cursorId int64) error {
 	cur := t.Cursors[cursorId]
-
-	if cur.LineIter == nil {
-		//printtln("Press 'F', пацан к успеху шёл, Какой успех, раздался смех")
-		return nil
-	}
 
 	if cur.CharIter == nil {
 		if cur.LineIter.GetPrev() == nil {
 			return nil
 		}
-
-		if cur.ScreenTail.LineIter == cur.ScreenHead.LineIter {
-			cur.ScrollUp()
-		} else if cur.ScreenTail.LineIter == cur.LineIter {
-			if cur.LineIter.GetNext() == nil {
-				cur.ScreenTail.Up()
-			} else {
-				if err := cur.ScreenTail.Down(); err == nil {
-					cur.ScreenTail.RowNumber--
-				}
-			}
-		} else if cur.ScreenHead.LineIter == cur.LineIter {
-			if cur.ScreenTail.RowNumber-cur.ScreenHead.RowNumber+1 >= cur.ScreenRow {
-				if err := cur.ScreenHead.Up(); err == nil {
-					cur.ScreenTail.RowNumber--
-				}
-			} else {
-				if err := cur.ScreenHead.Up(); err == nil {
-					cur.ScreenTail.RowNumber--
-				}
-			}
-		} else {
-			if cur.ScreenTail.RowNumber-cur.ScreenHead.RowNumber+1 >= cur.ScreenRow {
-				err := cur.ScreenTail.Down()
-				if err != nil {
-				}
-				cur.ScreenTail.RowNumber--
-			} else {
-				cur.ScreenTail.RowNumber--
-			}
-		}
-
-		prev := cur.LineIter.GetPrev()
-		oldTail := prev.GetValue().GetTail()
-		oldLen := prev.GetValue().Length()
-		err := t.MergeLines(cursorId)
-		if err != nil {
-			return err
-		}
-		cur.LineIter = prev
-		cur.CharIter = oldTail
-
-		cur.Row--
-		cur.Col = oldLen - 1
-
-		return nil
+        return t.RemoveCharBeforeFromBeginning(cur)
 	}
+    return t.RemovwCharBeforeFromMiddle(cur)
+}
 
+func (t *Text) RemoveCharBeforeFromBeginning(cur *Cursor) error { 
+    t.RemoveCharBeforeScroll(cur)
+
+    prev := cur.LineIter.GetPrev()
+    oldTail := prev.GetValue().GetTail()
+    oldLen := prev.GetValue().Length()
+    err := t.MergeLines(cur.Id)
+    if err != nil {
+        return err
+    }
+
+    cur.SetPosition(prev, oldTail, cur.Row-1, oldLen-1)
+    return nil
+}
+
+func (t *Text) RemovwCharBeforeFromMiddle(cur *Cursor) error {
 	newCharIter := cur.CharIter.GetPrev()
 	err := cur.LineIter.GetValue().Remove(cur.CharIter)
 
 	if err != nil {
 		return err
 	}
-
-	cur.CharIter = newCharIter
-	cur.Col--
-
+    cur.SetPosition(cur.LineIter, newCharIter, cur.Row, cur.Col-1)
 	return nil
+}
+
+func (t *Text) RemoveCharBeforeScroll(cur *Cursor) {
+    if cur.ScreenTail.LineIter == cur.ScreenHead.LineIter {
+        cur.ScrollUp()
+    } else if cur.ScreenTail.LineIter == cur.LineIter {
+        if cur.LineIter.GetNext() == nil {
+            cur.ScreenTail.Up()
+        } else {
+            if err := cur.ScreenTail.Down(); err == nil {
+                cur.ScreenTail.RowNumber--
+            }
+        }
+    } else if cur.ScreenHead.LineIter == cur.LineIter {
+        if cur.ScreenTail.RowNumber-cur.ScreenHead.RowNumber+1 >= cur.ScreenRow {
+            if err := cur.ScreenHead.Up(); err == nil {
+                cur.ScreenTail.RowNumber--
+            }
+        } else {
+            if err := cur.ScreenHead.Up(); err == nil {
+                cur.ScreenTail.RowNumber--
+            }
+        }
+    } else {
+        if cur.ScreenTail.RowNumber-cur.ScreenHead.RowNumber+1 >= cur.ScreenRow {
+            err := cur.ScreenTail.Down()
+            if err != nil {
+            }
+            cur.ScreenTail.RowNumber--
+        } else {
+            cur.ScreenTail.RowNumber--
+        }
+    }
 }
 
 func (t *Text) RemoveCharAfter(cursorId int64) error {
