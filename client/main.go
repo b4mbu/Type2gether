@@ -525,7 +525,7 @@ func (e *Engine) Loop() {
 		e.MessageQueueMutex.Unlock()
 		e.renderText(DEBUG_CUR_ID)
 
-		sdl.Delay(50)
+		sdl.Delay(10)
 	}
 
 	// err = e.SaveTextToFile()
