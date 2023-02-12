@@ -29,16 +29,16 @@ type Client struct {
 
 func NewClient(host, username, password string) (*Client, error) {
     u := url.URL{
-        Scheme: "ws", 
+        Scheme: "ws",
         Host: host,
         Path: "ws",
     }
-    
+
     header := http.Header{
         "username": {username},
         "password": {password},
     }
-    
+
     conn, _, err := websocket.DefaultDialer.Dial(u.String(), header)
 
     if err != nil {
@@ -62,10 +62,14 @@ func (client *Client) Start() {
 }
 
 func (client *Client) startWriter() {
-    scanner := bufio.NewScanner(os.Stdin)
     for {
-        scanner.Scan()
-        input := scanner.Text()
+
+
+
+
+
+
+        input := ""
 
         if input == ":exit" {
             cm := websocket.FormatCloseMessage(websocket.CloseNormalClosure,

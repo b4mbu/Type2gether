@@ -117,6 +117,7 @@ type Engine struct {
 	font     Font
 	text     *textmanager.Text
 	filename string
+    client   *Client
 
 	LineNumbersBackgroundColor uint32
 	LineNumbersColor           uint32
@@ -192,7 +193,10 @@ func NewEngine(windowWidth, windowHeight int32,
 	cursorColor uint32,
 
 	windowTitle,
-	supportedChars string) (*Engine, error) {
+	supportedChars,
+    host,
+    username,
+    password string) (*Engine, error) {
 
 	// if len(os.Args[1:]) < 1 {
 	// 	return nil, errors.New("no filename provided")
@@ -222,7 +226,7 @@ func NewEngine(windowWidth, windowHeight int32,
 	}
 
 	configRendererScale(renderer, windowWidth, windowHeight)
-
+    client, err := NewClient(host, username, password)
 	engine := &Engine{
 		renderer:                   renderer,
 		window:                     window,
@@ -231,6 +235,7 @@ func NewEngine(windowWidth, windowHeight int32,
 		LineNumbersColor:           lineNumbersColor,
 		TextBackgroundColor:        textBackgroundColor,
 		CursorColor:                cursorColor,
+        client:                     client,
 	}
 
 	err = engine.SetFont(fontFilename, fontSize, fontSpaceBetween, fontColor, lineNumbersColor)
@@ -246,14 +251,18 @@ func NewEngine(windowWidth, windowHeight int32,
 	}
 
 	// TODO server.createCursor(id) ??
-	cur := textmanager.NewCursor(0, engine.cache.RectangleMatrix.Rows, engine.cache.RectangleMatrix.Columns)
-	cur.LineIter = engine.text.GetHead()
+//	cur := textmanager.NewCursor(0, engine.cache.RectangleMatrix.Rows, engine.cache.RectangleMatrix.Columns)
+	engine.text.AddNewCursor(0, engine.cache.RectangleMatrix.Rows, engine.cache.RectangleMatrix.Columns)
+//	engine.text.Cursors = append(engine.text.Cursors, cur)
+    // TODO Передавать всё как аргументы в AddNewCursor
+    cur  := engine.text.Cursors[0]
+    cur.LineIter = engine.text.GetHead()
 	cur.CharIter = nil
 	cur.Color = cursorColor
 	// TODO для server сделать нормальное присвоение Tail и Head
 	cur.ScreenHead.LineIter = engine.text.GetHead()
 	cur.ScreenTail.LineIter = engine.text.GetTail()
-	engine.text.Cursors = append(engine.text.Cursors, cur)
+
 	// TODO add regular expr!!!
 	// engine.filename = os.Args[1]
 	return engine, nil
@@ -698,12 +707,15 @@ func main() {
 		TextBackgroundColor        uint32 = 0x282a36FF
 		CursorColor                uint32 = 0xDAD2D8FF
 		WindowTitle                string = "Type2gether"
+        host                       string = "localhost:8080"
+        username                   string = "Aboba"
+        password                   string = "youshallnotpass"
 	)
 
 	GUIStart()
 	defer GUIStop()
 
-	engine, err := NewEngine(ScreenWidth, ScreenHeight, FontFilename, FontSize, SpaceBetween, hexToSdlColor(FontColor), LineNumbersColor, LineNumbersBackgroundColor, TextBackgroundColor, CursorColor, WindowTitle, AllSupportedChars)
+	engine, err := NewEngine(ScreenWidth, ScreenHeight, FontFilename, FontSize, SpaceBetween, hexToSdlColor(FontColor), LineNumbersColor, LineNumbersBackgroundColor, TextBackgroundColor, CursorColor, WindowTitle, AllSupportedChars, host, username, password)
 
 	if err != nil {
 		panic(err)

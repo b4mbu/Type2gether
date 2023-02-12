@@ -224,6 +224,20 @@ func (t *Text) SetCursorStartPosition(cursorId int64) {
 	}
 }
 
+func (t *Text) AddNewCursor(cursorId int64, screenRow, ScreenCol int32) {
+	cursor := NewCursor(cursorId, screenRow, ScreenCol)
+	t.Cursors = append(t.Cursors, cursor)
+	t.SetCursorStartPosition(cursorId)
+}
+
+func (t *Text) RemoveCursor(cursorId int64) {
+	if cursorId+1 >= int64(len(t.Cursors)) {
+		t.Cursors = t.Cursors[:len(t.Cursors)-1]
+		return
+	}
+	t.Cursors = append(t.Cursors[:cursorId], t.Cursors[cursorId+1:]...)
+}
+
 func (t *Text) InsertCharBefore(cursorId int64, value rune) error {
 	err := t.InsertCharAfter(cursorId, value)
 	if err != nil {

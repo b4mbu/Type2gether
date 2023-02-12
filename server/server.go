@@ -99,7 +99,7 @@ func (s *Server) LoadTextFromFile(filename string) error {
 }
 
 func (s *Server) SaveTextToFile(filename string) error {
-	return filemanager.SaveToFile(filename, s.text.GetString())
+	return filemanager.SaveToFile(filename, s.text.GetFullText())
 }
 
 func (s *Server) checkAuth(next http.HandlerFunc) http.HandlerFunc {
