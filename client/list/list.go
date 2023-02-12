@@ -1,4 +1,3 @@
-// TODO TEST EVERYTHING!!!
 package list
 
 import (
@@ -139,7 +138,6 @@ func (l *List[T]) InsertAfter(value T, node *Node[T]) error {
 
 	if node == nil {
 		return errors.New("node is nil")
-		//return l.PushBack(value)
 	}
 
 	if node == l.tail {
@@ -188,7 +186,6 @@ func (l *List[T]) PushBack(value T) error {
 	return nil
 }
 
-//TODO: fix Remove with l.head == nil
 func (l *List[T]) Remove(node *Node[T]) error {
 	if node == nil || l.head == nil || l.tail == nil {
 		return errors.New("node or head or tail are nil")
@@ -263,7 +260,7 @@ func (l *List[T]) Index(node *Node[T]) int32 {
 
 	for ptr != nil && ptr != node {
 		ptr = ptr.next
-		ind += 1
+		ind++
 	}
 
 	if ptr == node {
