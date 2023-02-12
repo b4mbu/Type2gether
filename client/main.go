@@ -117,7 +117,7 @@ type Engine struct {
 	font     Font
 	text     *textmanager.Text
 	filename string
-    client   *Client
+	client   *Client
 
 	LineNumbersBackgroundColor uint32
 	LineNumbersColor           uint32
@@ -194,9 +194,9 @@ func NewEngine(windowWidth, windowHeight int32,
 
 	windowTitle,
 	supportedChars,
-    host,
-    username,
-    password string) (*Engine, error) {
+	host,
+	username,
+	password string) (*Engine, error) {
 
 	// if len(os.Args[1:]) < 1 {
 	// 	return nil, errors.New("no filename provided")
@@ -226,7 +226,7 @@ func NewEngine(windowWidth, windowHeight int32,
 	}
 
 	configRendererScale(renderer, windowWidth, windowHeight)
-    client, err := NewClient(host, username, password)
+	client, err := NewClient(host, username, password)
 	engine := &Engine{
 		renderer:                   renderer,
 		window:                     window,
@@ -235,7 +235,7 @@ func NewEngine(windowWidth, windowHeight int32,
 		LineNumbersColor:           lineNumbersColor,
 		TextBackgroundColor:        textBackgroundColor,
 		CursorColor:                cursorColor,
-        client:                     client,
+		client:                     client,
 	}
 
 	err = engine.SetFont(fontFilename, fontSize, fontSpaceBetween, fontColor, lineNumbersColor)
@@ -251,12 +251,12 @@ func NewEngine(windowWidth, windowHeight int32,
 	}
 
 	// TODO server.createCursor(id) ??
-//	cur := textmanager.NewCursor(0, engine.cache.RectangleMatrix.Rows, engine.cache.RectangleMatrix.Columns)
+	//	cur := textmanager.NewCursor(0, engine.cache.RectangleMatrix.Rows, engine.cache.RectangleMatrix.Columns)
 	engine.text.AddNewCursor(0, engine.cache.RectangleMatrix.Rows, engine.cache.RectangleMatrix.Columns)
-//	engine.text.Cursors = append(engine.text.Cursors, cur)
-    // TODO Передавать всё как аргументы в AddNewCursor
-    cur  := engine.text.Cursors[0]
-    cur.LineIter = engine.text.GetHead()
+	//	engine.text.Cursors = append(engine.text.Cursors, cur)
+	// TODO Передавать всё как аргументы в AddNewCursor
+	cur := engine.text.Cursors[0]
+	cur.LineIter = engine.text.GetHead()
 	cur.CharIter = nil
 	cur.Color = cursorColor
 	// TODO для server сделать нормальное присвоение Tail и Head
@@ -354,7 +354,7 @@ func getScaleFactor(fontFilename string) (float32, error) {
 	var maxH int32 = 0
 
 	for _, c := range AllSupportedChars {
-        surface, err := ttfFont.RenderGlyphBlended(c, sdl.Color{R: 0, G: 0, B: 0, A: 0})
+		surface, err := ttfFont.RenderGlyphBlended(c, sdl.Color{R: 0, G: 0, B: 0, A: 0})
 		if err != nil {
 			return 1, err
 		}
@@ -439,17 +439,24 @@ func (e *Engine) Loop() {
 	// if err != nil {
 	// 	println(err)
 	// }
+
+	messages := make(chan string)
+	go e.client.Start(messages)
+
 	e.renderText(DEBUG_CUR_ID)
 	for running {
 		for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
 			switch t := event.(type) {
 			case *sdl.QuitEvent:
 				//println("Quit")
+				messages <- ":exit"
 				running = false
 				break
 			case *sdl.TextInputEvent:
 				pressedKey := t.GetText()
-				e.InsertChar(rune(pressedKey[0]), DEBUG_CUR_ID)
+				letter := rune(pressedKey[0])
+				messages <- string(letter)
+				e.InsertChar(letter, DEBUG_CUR_ID)
 				e.renderText(DEBUG_CUR_ID)
 				break
 			case *sdl.KeyboardEvent:
@@ -547,7 +554,7 @@ func (e *Engine) renderText(cursorId int64) {
 		// TODO относительные координаты курсора от экрана
 
 		delta int32 = e.text.Cursors[cursorId].Col - e.cache.RectangleMatrix.Columns + 2 + 4
-        col int32 = 4
+		col   int32 = 4
 	)
 
 	e.renderBackground(paddingLeft)
@@ -567,8 +574,8 @@ func (e *Engine) renderText(cursorId int64) {
 	if delta < 0 {
 		delta = 0
 	}
-    
-    col += delta
+
+	col += delta
 
 	for _, c := range e.text.GetVisibleTextPart(0) {
 		if col-4 < delta {
@@ -707,9 +714,9 @@ func main() {
 		TextBackgroundColor        uint32 = 0x282a36FF
 		CursorColor                uint32 = 0xDAD2D8FF
 		WindowTitle                string = "Type2gether"
-        host                       string = "localhost:8080"
-        username                   string = "Aboba"
-        password                   string = "youshallnotpass"
+		host                       string = "localhost:8080"
+		username                   string = "Aboba"
+		password                   string = "youshallnotpass"
 	)
 
 	GUIStart()

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -16,95 +15,89 @@ import (
 var log = logger.NewLogger(os.Stdout)
 
 type Message struct {
-    AuthorUsername string `json:"AuthorUsername"`
-    Message        string `json:"message"`
+	AuthorUsername string `json:"AuthorUsername"`
+	Message        string `json:"message"`
 }
 
 type Client struct {
-    Conn     *websocket.Conn
-    Host     string
-    Username string
-    Password string
+	Conn     *websocket.Conn
+	Host     string
+	Username string
+	Password string
 }
 
 func NewClient(host, username, password string) (*Client, error) {
-    u := url.URL{
-        Scheme: "ws",
-        Host: host,
-        Path: "ws",
-    }
+	u := url.URL{
+		Scheme: "ws",
+		Host:   host,
+		Path:   "ws",
+	}
 
-    header := http.Header{
-        "username": {username},
-        "password": {password},
-    }
+	header := http.Header{
+		"username": {username},
+		"password": {password},
+	}
 
-    conn, _, err := websocket.DefaultDialer.Dial(u.String(), header)
+	conn, _, err := websocket.DefaultDialer.Dial(u.String(), header)
 
-    if err != nil {
-        return nil, err
-    }
+	if err != nil {
+		return nil, err
+	}
 
-    return &Client{
-        Conn: conn,
-        Host: host,
-        Username: username,
-        Password: password,
-    }, nil
+	return &Client{
+		Conn:     conn,
+		Host:     host,
+		Username: username,
+		Password: password,
+	}, nil
 }
 
-func (client *Client) Start() {
-    log.Success("Client started")
-    go client.startReader()
-    client.startWriter()
+func (client *Client) Start(messages chan string) {
+	log.Success("Client started")
+	go client.startReader()
+	client.startWriter(messages)
 
-    client.Conn.Close()
+	client.Conn.Close()
 }
 
-func (client *Client) startWriter() {
-    for {
+func (client *Client) startWriter(messages chan string) {
+	for {
+		select {
+		case input := <-messages:
+			if input == ":exit" {
+				cm := websocket.FormatCloseMessage(websocket.CloseNormalClosure,
+					fmt.Sprintf("username %s: closed", client.Username))
 
+				if err := client.Conn.WriteMessage(websocket.CloseMessage, cm); err != nil {
+					log.Error(err.Error())
+				}
+				return
+			}
 
-
-
-
-
-        input := ""
-
-        if input == ":exit" {
-            cm := websocket.FormatCloseMessage(websocket.CloseNormalClosure,
-                                               fmt.Sprintf("username %s: closed", client.Username))
-
-            if err := client.Conn.WriteMessage(websocket.CloseMessage, cm); err != nil {
-                log.Error(err.Error())
-            }
-            return
-        }
-
-        if err := client.Conn.WriteJSON(Message{AuthorUsername: client.Username, Message: input}); err != nil {
-            log.Error(err.Error())
-            continue
-        }
-    }
+			if err := client.Conn.WriteJSON(Message{AuthorUsername: client.Username, Message: input}); err != nil {
+				log.Error(err.Error())
+				continue
+			}
+		}
+	}
 }
 
 func (client *Client) startReader() {
-    for {
-        messageType, p, err := client.Conn.ReadMessage()
-        if err != nil {
-            log.Error(err.Error())
-            return
-        }
+	for {
+		messageType, p, err := client.Conn.ReadMessage()
+		if err != nil {
+			log.Error(err.Error())
+			return
+		}
 
-        var message Message
-        json.Unmarshal(p, &message)
+		var message Message
+		json.Unmarshal(p, &message)
 
-        fmt.Printf("[%s] %s\n", message.AuthorUsername, message.Message)
+		fmt.Printf("[%s] %s\n", message.AuthorUsername, message.Message)
 
-        if messageType == websocket.CloseMessage {
-            log.Info("Server closed connection")
-            return
-        }
-    }
+		if messageType == websocket.CloseMessage {
+			log.Info("Server closed connection")
+			return
+		}
+	}
 }
-
