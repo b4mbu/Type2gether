@@ -1,23 +1,18 @@
 package textmanager
 
+// 																																        сделать красиво =)
+
 import (
 	"client/list"
 	"errors"
 )
 
-const (
-	endl = '\n'
-)
-
-// type Line struct {
-//     list list.List[rune]
-// }
-// Cursor указывает на текущий элемент, а не на злемент за ним
-// Line теперь представляем не как наследуемую структуру от list.List[rune], а как list.List[rune] сам по себе.
-// чтобы создать новую строку, надо использовать line := new(list.List[rune])
-// все вызовы остаются, как прежде
-
 type Cursor struct {
+	/*
+	   	Cursor указывает на текущий элемент, а не на злемент за ним
+	      	Line теперь представляем не как наследуемую структуру от list.List[rune], а как list.List[rune] сам по себе.
+	      	Чтобы создать новую строку, надо использовать line := new(list.List[rune])
+	*/
 	LineIter *list.Node[*list.List[rune]]
 	CharIter *list.Node[rune]
 	Id       int64
@@ -33,9 +28,9 @@ type Cursor struct {
 	ScreenCol  int32
 }
 
-//Эта структура нужна для скрола
-//Эта структура нужна для отрисовки нумерации строк
 type Border struct {
+	/* Эта структура нужна для скрола
+	   Эта структура нужна для отрисовки нумерации строк */
 	LineIter  *list.Node[*list.List[rune]]
 	RowNumber int32
 }
@@ -68,6 +63,14 @@ func (border *Border) Down() error {
 	return nil
 }
 
+func (cur *Cursor) SetPosition(lineIter *list.Node[*list.List[rune]], charIter *list.Node[rune], row, col int32) {
+	/* Be careful! CharIter is not being checked whether it exists in lineIter */
+	cur.LineIter = lineIter
+	cur.CharIter = charIter
+	cur.Row = row
+	cur.Col = col
+}
+
 func (cur *Cursor) ScrollUp() {
 	if err := cur.ScreenHead.Up(); err == nil {
 		cur.ScreenTail.Up()
@@ -80,31 +83,17 @@ func (cur *Cursor) ScrollDown() {
 	}
 }
 
-/*
-type Line struct {
-    Value       *list.List[rune]
-    IsNatural   bool
-    width       int32
-}
-*/
 type Text struct {
 	list.List[*list.List[rune]]
-	// скорее всего не нужен тк в List есть аттрибут lenght /  size      int64
 	Cursors []*Cursor
 }
 
 func NewText() *Text {
 	t := new(Text)
 	t.PushBack(new(list.List[rune]))
-	// for _, cur := range t.Cursors {
-	//     cur.ScreenHead.LineIter = t.GetHead()
-	//     cur.ScreenTail.LineIter = t.GetTail()
-	// }
 	return t
 }
 
-// TODO написать присвоение id для курсора
-// TODO на данном этапе при создании NewCursor просто всегда будем 0 в него передавать, когда будем писать серверную часть нужно будет определиться с созданием Id
 func NewCursor(Id int64, ScreenRow, ScreenCol int32) *Cursor {
 	c := new(Cursor)
 	c.Row = 0
@@ -120,11 +109,7 @@ func NewCursor(Id int64, ScreenRow, ScreenCol int32) *Cursor {
 
 func (t *Text) SetCursorStartPosition(cursorId int64) {
 	cur := t.Cursors[cursorId]
-	cur.Row = 0
-	cur.LineIter = t.GetHead()
-
-	cur.Col = -1
-	cur.CharIter = nil
+	cur.SetPosition(t.GetHead(), nil, 0, -1)
 
 	cur.ScreenLeft = 0
 	cur.ScreenHead = &Border{LineIter: t.GetHead(), RowNumber: 0} // Егор сказал, что выстрелит, но куда... (создаем новый объект, а не меняем старый)
@@ -136,11 +121,6 @@ func (t *Text) SetCursorStartPosition(cursorId int64) {
 		}
 	}
 }
-
-// TODO сделать красиво =)
-//сделать откат строки, и ячейки если у нас не вставилась буква
-// строку откатываем, только если мы одновременно создаём строку и ячейку
-// иначе откатываем только ячейку
 
 func (t *Text) InsertCharBefore(cursorId int64, value rune) error {
 	err := t.InsertCharAfter(cursorId, value)
@@ -158,12 +138,10 @@ func (t *Text) InsertCharAfter(cursorId int64, value rune) error {
 		err := cur.LineIter.GetValue().PushFront(value)
 
 		if err != nil {
-			//printtln(err)
 			return err
 		}
 
-		cur.CharIter = cur.LineIter.GetValue().GetHead()
-		cur.Col = 0
+		cur.SetPosition(cur.LineIter, cur.LineIter.GetValue().GetHead(), cur.Row, 0)
 		return nil
 	}
 
@@ -173,23 +151,18 @@ func (t *Text) InsertCharAfter(cursorId int64, value rune) error {
 		return err
 	}
 
-	cur.CharIter = cur.CharIter.GetNext()
-	cur.Col++
+	cur.SetPosition(cur.LineIter, cur.CharIter.GetNext(), cur.Row, cur.Col+1)
 	return nil
 }
 
 // TODO validation
 func (t *Text) Paste(data string, cursorId int64) error {
-	//cur := t.Cursors[cursorId]
 	var err error
-	println("data: ", data)
-	// TODO замена на before и перевернуть цикл
-	for _, e := range data {
-		if e == '\n' {
-			println("\\n")
+	for _, c := range data {
+		if c == '\n' {
 			err = t.InsertLineAfter(cursorId)
 		} else {
-			err = t.InsertCharAfter(cursorId, e)
+			err = t.InsertCharAfter(cursorId, c)
 		}
 
 		if err != nil {
@@ -206,73 +179,43 @@ func (t *Text) InsertLineAfter(cursorId int64) error {
 	if cur.CharIter == nil {
 		line := new(list.List[rune])
 		if cur.LineIter.GetValue().GetTail() != nil {
-			// line isn't empty
-			err := t.InsertAfter(line, cur.LineIter)
-
-			if err != nil {
-				return err
-			}
-
-			if cur.ScreenTail.RowNumber-cur.ScreenHead.RowNumber+1 >= cur.ScreenRow {
-				if cur.LineIter == cur.ScreenTail.LineIter {
-					cur.ScrollDown()
-				} else {
-					cur.ScreenTail.Up()
-					cur.ScreenTail.RowNumber++
-				}
-			} else {
-				if cur.LineIter == cur.ScreenTail.LineIter {
-					cur.ScreenTail.Down()
-				} else {
-					cur.ScreenTail.RowNumber++
-				}
-			}
-
-			cur.LineIter.GetValue().CopyTo(cur.LineIter.GetNext().GetValue())
-			cur.LineIter.GetValue().Clear()
-
-			cur.LineIter = cur.LineIter.GetNext()
-			cur.CharIter = nil
-
-			// cur.ScrollDown()
-			//printtln("head & tail", cur.ScreenHead.RowNumber, cur.ScreenTail.RowNumber)
-
-			cur.Row++
-			cur.Col = -1
-			return nil
+			return t.InsertLineAfterNonEmptyLineFromBeginning(line, cur)
 		}
-		// line is empty
-		err := t.InsertAfter(line, cur.LineIter)
+		return t.InsertLineAfterEmptyLine(line, cur)
+	}
+	return t.InsertLineAfterNonEmptyLine(cur)
+}
 
-		if err != nil {
-			return err
-		}
+func (t *Text) InsertLineAfterNonEmptyLineFromBeginning(line *list.List[rune], cur *Cursor) error {
+	err := t.InsertAfter(line, cur.LineIter)
 
-		if cur.ScreenTail.RowNumber-cur.ScreenHead.RowNumber+1 >= cur.ScreenRow {
-			if cur.LineIter == cur.ScreenTail.LineIter {
-				cur.ScrollDown()
-			} else {
-				cur.ScreenTail.Up()
-				cur.ScreenTail.RowNumber++
-			}
-		} else {
-			if cur.LineIter == cur.ScreenTail.LineIter {
-				cur.ScreenTail.Down()
-			} else {
-				cur.ScreenTail.RowNumber++
-			}
-		}
-
-		cur.LineIter = cur.LineIter.GetNext()
-		cur.CharIter = cur.LineIter.GetValue().GetHead()
-
-		// cur.ScrollDown()
-
-		cur.Row++
-		cur.Col = -1
-		return nil
+	if err != nil {
+		return err
 	}
 
+	t.InsertLineAfterScroll(cur)
+
+	cur.LineIter.GetValue().CopyTo(cur.LineIter.GetNext().GetValue())
+	cur.LineIter.GetValue().Clear()
+
+	cur.SetPosition(cur.LineIter.GetNext(), nil, cur.Row+1, -1)
+	return nil
+}
+
+func (t *Text) InsertLineAfterEmptyLine(line *list.List[rune], cur *Cursor) error {
+	err := t.InsertAfter(line, cur.LineIter)
+
+	if err != nil {
+		return err
+	}
+
+	t.InsertLineAfterScroll(cur)
+
+	cur.SetPosition(cur.LineIter.GetNext(), nil, cur.Row+1, -1)
+	return nil
+}
+
+func (t *Text) InsertLineAfterNonEmptyLine(cur *Cursor) error {
 	oldLineIter := cur.LineIter
 	lst, err := oldLineIter.GetValue().Split(cur.CharIter.GetNext())
 
@@ -292,6 +235,13 @@ func (t *Text) InsertLineAfter(cursorId int64) error {
 	}
 	oldLineIter.SetNext(node)
 
+	t.InsertLineAfterScroll(cur)
+
+	cur.SetPosition(node, nil, cur.Row+1, -1)
+	return nil
+}
+
+func (t *Text) InsertLineAfterScroll(cur *Cursor) {
 	if cur.ScreenTail.RowNumber-cur.ScreenHead.RowNumber+1 >= cur.ScreenRow {
 		if cur.LineIter == cur.ScreenTail.LineIter {
 			cur.ScrollDown()
@@ -306,15 +256,6 @@ func (t *Text) InsertLineAfter(cursorId int64) error {
 			cur.ScreenTail.RowNumber++
 		}
 	}
-
-	cur.LineIter = node
-	cur.CharIter = nil
-
-	// cur.ScrollDown()
-
-	cur.Row++
-	cur.Col = -1
-	return nil
 }
 
 // TODO cur.CharIter == nil не значит, что строка пустая || Нужно проверить везде в коде это
