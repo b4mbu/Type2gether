@@ -144,6 +144,8 @@ func (s *Server) wsEndpoint(w http.ResponseWriter, r *http.Request) {
 
 	s.logger.Success(fmt.Sprintf("User %s: connected", username))
 
+	go s.writeMessageToClientsExceptAuthor(&Message{Message: ":connected", AuthorUsername: username}, username)
+
 	go s.RunReader(client)
 }
 
@@ -188,12 +190,21 @@ func (s *Server) RunWriter() {
 	for {
 		select {
 		case message := <-s.messages:
-			s.writeMessageToClients(message, message.AuthorUsername)
+			s.writeMessageToAllClients(message)
 		}
 	}
 }
 
-func (s *Server) writeMessageToClients(message *Message, authorUsername string) {
+func (s *Server) writeMessageToAllClients(message *Message) {
+	s.clientsMutex.Lock()
+	defer s.clientsMutex.Unlock()
+
+	for _, client := range s.clients {
+		client.Conn.WriteJSON(message)
+	}
+}
+
+func (s *Server) writeMessageToClientsExceptAuthor(message *Message, authorUsername string) {
 	s.clientsMutex.Lock()
 	defer s.clientsMutex.Unlock()
 

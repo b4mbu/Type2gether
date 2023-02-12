@@ -52,10 +52,10 @@ func NewClient(host, username, password string) (*Client, error) {
 	}, nil
 }
 
-func (client *Client) Start(messages chan string) {
+func (client *Client) Start(min chan *Message, mout chan string) {
 	log.Success("Client started")
-	go client.startReader()
-	client.startWriter(messages)
+	go client.startReader(min)
+	client.startWriter(mout)
 
 	client.Conn.Close()
 }
@@ -82,7 +82,7 @@ func (client *Client) startWriter(messages chan string) {
 	}
 }
 
-func (client *Client) startReader() {
+func (client *Client) startReader(min chan *Message) {
 	for {
 		messageType, p, err := client.Conn.ReadMessage()
 		if err != nil {
@@ -96,8 +96,10 @@ func (client *Client) startReader() {
 		fmt.Printf("[%s] %s\n", message.AuthorUsername, message.Message)
 
 		if messageType == websocket.CloseMessage {
+			// TODO: send to application
 			log.Info("Server closed connection")
 			return
 		}
+		min <- &message
 	}
 }

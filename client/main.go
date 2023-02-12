@@ -4,6 +4,8 @@ import (
 	"client/textmanager"
 	"errors"
 	"math"
+	"os"
+	"sync"
 
 	"github.com/veandco/go-sdl2/sdl"
 	"github.com/veandco/go-sdl2/ttf"
@@ -123,6 +125,9 @@ type Engine struct {
 	LineNumbersColor           uint32
 	TextBackgroundColor        uint32
 	CursorColor                uint32
+
+	MessageQueueMutex sync.Mutex
+	MessageQueue      []*Message
 }
 
 func (e *Engine) RenderCursor(cursorId int64) {
@@ -431,17 +436,31 @@ func (e *Engine) SetCache(supportedChars string) error {
 // 	return filemanager.SaveToFile(e.filename, e.text.GetString())
 // }
 
+func (e *Engine) WaitForMessage(min chan *Message) {
+	for {
+		select {
+		case message := <-min:
+			e.MessageQueueMutex.Lock()
+			e.MessageQueue = append(e.MessageQueue, message)
+			e.MessageQueueMutex.Unlock()
+		}
+	}
+}
+
 // TODO подумать о том, чтобы не ифать два раза а в EraseChar, InsertChar, MoveCursor передавать просто scancode
 func (e *Engine) Loop() {
-	running := true
-	DEBUG_CUR_ID := int64(0)
+	var (
+		running      = true
+		DEBUG_CUR_ID = int64(0)
+		min          = make(chan *Message)
+		mout         = make(chan string)
+	)
 	// err := e.LoadTextFromFile(DEBUG_CUR_ID)
 	// if err != nil {
 	// 	println(err)
 	// }
-
-	messages := make(chan string)
-	go e.client.Start(messages)
+	go e.WaitForMessage(min)
+	go e.client.Start(min, mout)
 
 	e.renderText(DEBUG_CUR_ID)
 	for running {
@@ -449,13 +468,13 @@ func (e *Engine) Loop() {
 			switch t := event.(type) {
 			case *sdl.QuitEvent:
 				//println("Quit")
-				messages <- ":exit"
+				mout <- ":exit"
 				running = false
 				break
 			case *sdl.TextInputEvent:
 				pressedKey := t.GetText()
 				letter := rune(pressedKey[0])
-				messages <- string(letter)
+				mout <- string(letter)
 				e.InsertChar(letter, DEBUG_CUR_ID)
 				e.renderText(DEBUG_CUR_ID)
 				break
@@ -489,6 +508,23 @@ func (e *Engine) Loop() {
 				break
 			}
 		}
+
+		e.MessageQueueMutex.Lock()
+		for _, message := range e.MessageQueue {
+			if message.Message == ":connected" {
+				// TODO: you know
+				e.text.AddNewCursor(int64(len(e.text.Cursors)), e.cache.RectangleMatrix.Rows, e.cache.RectangleMatrix.Columns)
+				e.text.Cursors[1].Color = 0x00FF20FF
+			} else {
+				if message.AuthorUsername != e.client.Username {
+					e.InsertChar(rune(message.Message[0]), 1)
+				}
+			}
+		}
+		e.MessageQueue = e.MessageQueue[:0]
+		e.MessageQueueMutex.Unlock()
+		e.renderText(DEBUG_CUR_ID)
+
 		sdl.Delay(50)
 	}
 
@@ -703,8 +739,8 @@ func DtoR(n int32) rune {
 
 func main() {
 	var (
-		ScreenHeight               int32  = 720
-		ScreenWidth                int32  = 1280
+		ScreenHeight               int32  = 480
+		ScreenWidth                int32  = 640
 		FontSize                   int32  = 30 // in px!
 		SpaceBetween               int32  = 0
 		FontFilename               string = "MonoNL-Regular.ttf"
@@ -715,9 +751,10 @@ func main() {
 		CursorColor                uint32 = 0xDAD2D8FF
 		WindowTitle                string = "Type2gether"
 		host                       string = "localhost:8080"
-		username                   string = "Aboba"
 		password                   string = "youshallnotpass"
 	)
+
+	username := os.Args[1]
 
 	GUIStart()
 	defer GUIStop()
