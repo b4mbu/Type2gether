@@ -5,6 +5,7 @@ go 1.18
 require (
 	github.com/fatih/color v1.14.1
 	github.com/gorilla/websocket v1.5.0
+	github.com/veandco/go-sdl2 v0.4.33
 )
 
 require (

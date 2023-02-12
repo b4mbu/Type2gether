@@ -1,7 +1,7 @@
 package main
 
 func main() {
-    server := NewServer("youshallnotpass")
-    server.SetupRoutes()
-    server.Start()
+	server := NewServer("youshallnotpass", "go.mod")
+	server.SetupRoutes()
+	server.Start()
 }

@@ -1,0 +1,21 @@
+# github.com/fatih/color v1.14.1
+## explicit; go 1.17
+github.com/fatih/color
+# github.com/gorilla/websocket v1.5.0
+## explicit; go 1.12
+github.com/gorilla/websocket
+# github.com/mattn/go-colorable v0.1.13
+## explicit; go 1.15
+github.com/mattn/go-colorable
+# github.com/mattn/go-isatty v0.0.17
+## explicit; go 1.15
+github.com/mattn/go-isatty
+# github.com/veandco/go-sdl2 v0.4.33
+## explicit; go 1.15
+github.com/veandco/go-sdl2/.go-sdl2-libs
+github.com/veandco/go-sdl2/.go-sdl2-libs/include/SDL2
+github.com/veandco/go-sdl2/sdl
+github.com/veandco/go-sdl2/ttf
+# golang.org/x/sys v0.3.0
+## explicit; go 1.17
+golang.org/x/sys/unix

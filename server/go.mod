@@ -1,4 +1,4 @@
-module server
+!123module server
 
 go 1.18
 
