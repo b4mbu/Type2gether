@@ -510,6 +510,7 @@ func (e *Engine) Loop() {
 		}
 
 		e.MessageQueueMutex.Lock()
+		needsRender := len(e.MessageQueue) > 0
 		for _, message := range e.MessageQueue {
 			if message.Message == ":connected" {
 				// TODO: you know
@@ -523,7 +524,9 @@ func (e *Engine) Loop() {
 		}
 		e.MessageQueue = e.MessageQueue[:0]
 		e.MessageQueueMutex.Unlock()
-		e.renderText(DEBUG_CUR_ID)
+		if needsRender {
+			e.renderText(DEBUG_CUR_ID)
+		}
 
 		sdl.Delay(10)
 	}
