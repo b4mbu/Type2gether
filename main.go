@@ -338,7 +338,7 @@ func getScaleFactor(fontFilename string) (float32, error) {
 	var maxH int32 = 0
 
 	for _, c := range AllSupportedChars {
-		surface, err := ttfFont.RenderGlyphBlended(c, sdl.Color{0, 0, 0, 0})
+        surface, err := ttfFont.RenderGlyphBlended(c, sdl.Color{R: 0, G: 0, B: 0, A: 0})
 		if err != nil {
 			return 1, err
 		}
@@ -693,8 +693,8 @@ func DtoR(n int32) rune {
 
 func main() {
 	var (
-		ScreenHeight               int32  = 1080
-		ScreenWidth                int32  = 1920
+		ScreenHeight               int32  = 720
+		ScreenWidth                int32  = 1280
 		FontSize                   int32  = 30 // in px!
 		SpaceBetween               int32  = 0
 		FontFilename               string = "MonoNL-Regular.ttf"
