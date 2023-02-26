@@ -199,8 +199,8 @@ func NewEngine(windowWidth, windowHeight int32,
 		windowHeight,
 		sdl.WINDOW_SHOWN|sdl.WINDOW_ALLOW_HIGHDPI,
 	)
-    // window.SetResizable(true)
-    // window.SetPosition(0, 0)
+	// window.SetResizable(true)
+	// window.SetPosition(0, 0)
 
 	// window.SetFullscreen(1)
 
@@ -425,48 +425,49 @@ func (e *Engine) Loop() {
 	}
 	e.renderText(DEBUG_CUR_ID)
 	for running {
-		for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
-			switch t := event.(type) {
-			case *sdl.QuitEvent:
-				//println("Quit")
-				running = false
-				break
-			case *sdl.TextInputEvent:
-				pressedKey := t.GetText()
-				e.InsertChar(rune(pressedKey[0]), DEBUG_CUR_ID)
-				e.renderText(DEBUG_CUR_ID)
-				break
-			case *sdl.KeyboardEvent:
-				// this branch active too when *sdl.TextInputEvent
-				// TODO be careful!
-				if t.State != sdl.PRESSED {
-					break
-				}
-				//println("Scancode: ", t.Keysym.Scancode)
+		event := sdl.WaitEvent()
+		if event == nil {
+			continue
+		}
 
-				key := t.Keysym.Scancode
-
-				if key == sdl.SCANCODE_DELETE || key == sdl.SCANCODE_BACKSPACE {
-					e.EraseChar(key, DEBUG_CUR_ID)
-				}
-
-				if key == sdl.SCANCODE_LEFT || key == sdl.SCANCODE_RIGHT || key == sdl.SCANCODE_UP || key == sdl.SCANCODE_DOWN || key == sdl.SCANCODE_HOME || key == 95 || key == sdl.SCANCODE_END || key == 89 {
-					e.MoveCursor(key, DEBUG_CUR_ID)
-				}
-
-				switch t.Keysym.Scancode {
-				case sdl.SCANCODE_RETURN:
-					e.InsertChar('\n', DEBUG_CUR_ID)
-
-				case sdl.SCANCODE_TAB:
-					// TODO 4 -> SPACE_IN_ONE_TAB
-					e.InsertChar('\t', DEBUG_CUR_ID)
-				}
-				e.renderText(DEBUG_CUR_ID)
+		switch t := event.(type) {
+		case sdl.QuitEvent:
+			//println("Quit")
+			running = false
+			break
+		case sdl.TextInputEvent:
+			pressedKey := t.GetText()
+			e.InsertChar(rune(pressedKey[0]), DEBUG_CUR_ID)
+			e.renderText(DEBUG_CUR_ID)
+			break
+		case sdl.KeyboardEvent:
+			// this branch active too when sdl.TextInputEvent
+			// TODO be careful!
+			if t.State != sdl.PRESSED {
 				break
 			}
+
+			key := t.Keysym.Scancode
+
+			if key == sdl.SCANCODE_DELETE || key == sdl.SCANCODE_BACKSPACE {
+				e.EraseChar(key, DEBUG_CUR_ID)
+			}
+
+			if key == sdl.SCANCODE_LEFT || key == sdl.SCANCODE_RIGHT || key == sdl.SCANCODE_UP || key == sdl.SCANCODE_DOWN || key == sdl.SCANCODE_HOME || key == 95 || key == sdl.SCANCODE_END || key == 89 {
+				e.MoveCursor(key, DEBUG_CUR_ID)
+			}
+
+			switch t.Keysym.Scancode {
+			case sdl.SCANCODE_RETURN:
+				e.InsertChar('\n', DEBUG_CUR_ID)
+
+			case sdl.SCANCODE_TAB:
+				// TODO 4 -> SPACE_IN_ONE_TAB
+				e.InsertChar('\t', DEBUG_CUR_ID)
+			}
+			e.renderText(DEBUG_CUR_ID)
+			break
 		}
-		sdl.Delay(50)
 	}
 
 	err = e.SaveTextToFile()

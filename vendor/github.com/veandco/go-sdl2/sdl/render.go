@@ -15,10 +15,24 @@ static inline int SDL_UpdateYUVTexture(SDL_Texture* texture, const SDL_Rect* rec
 }
 #endif
 
+#if !(SDL_VERSION_ATLEAST(2,0,4))
+
+#if defined(WARN_OUTDATED)
+#pragma message("SDL_RenderIsClipEnabled is not supported before SDL 2.0.4")
+#endif
+
+static inline SDL_bool SDLCALL SDL_RenderIsClipEnabled(SDL_Renderer * renderer)
+{
+	return SDL_FALSE;
+}
+
+#endif
+
 #if !(SDL_VERSION_ATLEAST(2,0,5))
 
 #if defined(WARN_OUTDATED)
 #pragma message("SDL_RenderSetIntegerScale is not supported before SDL 2.0.5")
+#pragma message("SDL_RenderGetIntegerScale is not supported before SDL 2.0.5")
 #endif
 
 static inline int SDL_RenderSetIntegerScale(SDL_Renderer* renderer, SDL_bool enable)
@@ -26,10 +40,6 @@ static inline int SDL_RenderSetIntegerScale(SDL_Renderer* renderer, SDL_bool ena
 	SDL_Unsupported();
 	return -1;
 }
-
-#if defined(WARN_OUTDATED)
-#pragma message("SDL_RenderGetIntegerScale is not supported before SDL 2.0.5")
-#endif
 
 static inline SDL_bool SDL_RenderGetIntegerScale(SDL_Renderer* renderer)
 {
@@ -43,17 +53,13 @@ static inline SDL_bool SDL_RenderGetIntegerScale(SDL_Renderer* renderer)
 
 #if defined(WARN_OUTDATED)
 #pragma message("SDL_RenderGetMetalLayer is not supported before SDL 2.0.8")
+#pragma message("SDL_RenderGetMetalCommandEncoder is not supported before SDL 2.0.8")
 #endif
 
 static inline void * SDL_RenderGetMetalLayer(SDL_Renderer *renderer)
 {
 	return NULL;
 }
-
-
-#if defined(WARN_OUTDATED)
-#pragma message("SDL_RenderGetMetalCommandEncoder is not supported before SDL 2.0.8")
-#endif
 
 static inline void * SDL_RenderGetMetalCommandEncoder(SDL_Renderer *renderer)
 {
@@ -66,6 +72,16 @@ static inline void * SDL_RenderGetMetalCommandEncoder(SDL_Renderer *renderer)
 
 #if defined(WARN_OUTDATED)
 #pragma message("SDL_RenderDrawPointF is not supported before SDL 2.0.10")
+#pragma message("SDL_RenderDrawPointsF is not supported before SDL 2.0.10")
+#pragma message("SDL_RenderDrawLineF is not supported before SDL 2.0.10")
+#pragma message("SDL_RenderDrawLinesF is not supported before SDL 2.0.10")
+#pragma message("SDL_RenderDrawRectF is not supported before SDL 2.0.10")
+#pragma message("SDL_RenderDrawRectsF is not supported before SDL 2.0.10")
+#pragma message("SDL_RenderFillRectF is not supported before SDL 2.0.10")
+#pragma message("SDL_RenderFillRectsF is not supported before SDL 2.0.10")
+#pragma message("SDL_RenderCopyF is not supported before SDL 2.0.10")
+#pragma message("SDL_RenderCopyExF is not supported before SDL 2.0.10")
+#pragma message("SDL_RenderFlush is not supported before SDL 2.0.10")
 #endif
 
 static inline int SDL_RenderDrawPointF(SDL_Renderer * renderer, float x, float y)
@@ -73,90 +89,50 @@ static inline int SDL_RenderDrawPointF(SDL_Renderer * renderer, float x, float y
 	return SDL_RenderDrawPoint(renderer, (int) x, (int) y);
 }
 
-#if defined(WARN_OUTDATED)
-#pragma message("SDL_RenderDrawPointsF is not supported before SDL 2.0.10")
-#endif
-
 static inline int SDL_RenderDrawPointsF(SDL_Renderer * renderer, const SDL_FPoint * points, int count)
 {
 	return SDL_RenderDrawPoints(renderer, (const SDL_Point *) points, count);
 }
-
-#if defined(WARN_OUTDATED)
-#pragma message("SDL_RenderDrawLineF is not supported before SDL 2.0.10")
-#endif
 
 static inline int SDL_RenderDrawLineF(SDL_Renderer * renderer, float x1, float y1, float x2, float y2)
 {
 	return SDL_RenderDrawLine(renderer, (int) x1, (int) y1, (int) x2, (int) y2);
 }
 
-#if defined(WARN_OUTDATED)
-#pragma message("SDL_RenderDrawLinesF is not supported before SDL 2.0.10")
-#endif
-
 static inline int SDL_RenderDrawLinesF(SDL_Renderer * renderer, const SDL_FPoint * points, int count)
 {
 	return SDL_RenderDrawLines(renderer, (const SDL_Point *) points, count);
 }
-
-#if defined(WARN_OUTDATED)
-#pragma message("SDL_RenderDrawRectF is not supported before SDL 2.0.10")
-#endif
 
 static inline int SDL_RenderDrawRectF(SDL_Renderer * renderer, const SDL_FRect * rect)
 {
 	return SDL_RenderDrawRect(renderer, (const SDL_Rect *) rect);
 }
 
-#if defined(WARN_OUTDATED)
-#pragma message("SDL_RenderDrawRectsF is not supported before SDL 2.0.10")
-#endif
-
 static inline int SDL_RenderDrawRectsF(SDL_Renderer * renderer, const SDL_FRect *rects, int count)
 {
 	return SDL_RenderDrawRects(renderer, (const SDL_Rect *) rects, count);
 }
-
-#if defined(WARN_OUTDATED)
-#pragma message("SDL_RenderFillRectF is not supported before SDL 2.0.10")
-#endif
 
 static inline int SDL_RenderFillRectF(SDL_Renderer * renderer, const SDL_FRect * rect)
 {
 	return SDL_RenderFillRect(renderer, (const SDL_Rect *) rect);
 }
 
-#if defined(WARN_OUTDATED)
-#pragma message("SDL_RenderFillRectsF is not supported before SDL 2.0.10")
-#endif
-
 static inline int SDL_RenderFillRectsF(SDL_Renderer * renderer, const SDL_FRect * rects, int count)
 {
 	return SDL_RenderFillRects(renderer, (const SDL_Rect *) rects, count);
 }
-
-#if defined(WARN_OUTDATED)
-#pragma message("SDL_RenderCopyF is not supported before SDL 2.0.10")
-#endif
 
 static inline int SDL_RenderCopyF(SDL_Renderer * renderer, SDL_Texture * texture, const SDL_Rect * srcrect, const SDL_FRect * dstrect)
 {
 	return SDL_RenderCopy(renderer, texture, srcrect, (const SDL_Rect *) dstrect);
 }
 
-#if defined(WARN_OUTDATED)
-#pragma message("SDL_RenderCopyExF is not supported before SDL 2.0.10")
-#endif
-
 static inline int SDL_RenderCopyExF(SDL_Renderer * renderer, SDL_Texture * texture, const SDL_Rect * srcrect, const SDL_FRect * dstrect, const double angle, const SDL_FPoint * center, const SDL_RendererFlip flip)
 {
 	return SDL_RenderCopyEx(renderer, texture, srcrect, (const SDL_Rect *) dstrect, angle, (const SDL_Point *) center, flip);
 }
-
-#if defined(WARN_OUTDATED)
-#pragma message("SDL_RenderFlush is not supported before SDL 2.0.10")
-#endif
 
 static inline int SDL_RenderFlush(SDL_Renderer * renderer)
 {
@@ -307,45 +283,65 @@ import (
 
 // An enumeration of flags used when creating a rendering context.
 // (https://wiki.libsdl.org/SDL_RendererFlags)
+type RendererFlags uint32
+
 const (
-	RENDERER_SOFTWARE      = C.SDL_RENDERER_SOFTWARE      // the renderer is a software fallback
-	RENDERER_ACCELERATED   = C.SDL_RENDERER_ACCELERATED   // the renderer uses hardware acceleration
-	RENDERER_PRESENTVSYNC  = C.SDL_RENDERER_PRESENTVSYNC  // present is synchronized with the refresh rate
-	RENDERER_TARGETTEXTURE = C.SDL_RENDERER_TARGETTEXTURE // the renderer supports rendering to texture
+	RENDERER_SOFTWARE      RendererFlags = C.SDL_RENDERER_SOFTWARE      // the renderer is a software fallback
+	RENDERER_ACCELERATED   RendererFlags = C.SDL_RENDERER_ACCELERATED   // the renderer uses hardware acceleration
+	RENDERER_PRESENTVSYNC  RendererFlags = C.SDL_RENDERER_PRESENTVSYNC  // present is synchronized with the refresh rate
+	RENDERER_TARGETTEXTURE RendererFlags = C.SDL_RENDERER_TARGETTEXTURE // the renderer supports rendering to texture
 )
 
-type ScaleMode C.SDL_ScaleMode
+type ScaleMode uint32
 
 // The scaling mode for a texture.
 const (
 	ScaleModeNearest ScaleMode = C.SDL_ScaleModeNearest // nearest pixel sampling
-	ScaleModeLinear            = C.SDL_ScaleModeLinear  // linear filtering
-	ScaleModeBest              = C.SDL_ScaleModeBest    // anisotropic filtering
+	ScaleModeLinear  ScaleMode = C.SDL_ScaleModeLinear  // linear filtering
+	ScaleModeBest    ScaleMode = C.SDL_ScaleModeBest    // anisotropic filtering
 )
+
+func (sm ScaleMode) c() C.SDL_ScaleMode {
+	return C.SDL_ScaleMode(C.Uint32(sm))
+}
+
+func (sm *ScaleMode) cptr() *C.SDL_ScaleMode {
+	return (*C.SDL_ScaleMode)(unsafe.Pointer(sm))
+}
 
 // An enumeration of texture access patterns..
 // (https://wiki.libsdl.org/SDL_TextureAccess)
+type TextureAccess int
+
 const (
-	TEXTUREACCESS_STATIC    = C.SDL_TEXTUREACCESS_STATIC    // changes rarely, not lockable
-	TEXTUREACCESS_STREAMING = C.SDL_TEXTUREACCESS_STREAMING // changes frequently, lockable
-	TEXTUREACCESS_TARGET    = C.SDL_TEXTUREACCESS_TARGET    // can be used as a render target
+	TEXTUREACCESS_STATIC    TextureAccess = C.SDL_TEXTUREACCESS_STATIC    // changes rarely, not lockable
+	TEXTUREACCESS_STREAMING TextureAccess = C.SDL_TEXTUREACCESS_STREAMING // changes frequently, lockable
+	TEXTUREACCESS_TARGET    TextureAccess = C.SDL_TEXTUREACCESS_TARGET    // can be used as a render target
 )
 
 // An enumeration of the texture channel modulation used in Renderer.Copy().
 // (https://wiki.libsdl.org/SDL_TextureModulate)
+type TextureModulate C.SDL_TextureModulate
+
 const (
-	TEXTUREMODULATE_NONE  = C.SDL_TEXTUREMODULATE_NONE  // no modulation
-	TEXTUREMODULATE_COLOR = C.SDL_TEXTUREMODULATE_COLOR // srcC = srcC * color
-	TEXTUREMODULATE_ALPHA = C.SDL_TEXTUREMODULATE_ALPHA // srcA = srcA * alpha
+	TEXTUREMODULATE_NONE  TextureModulate = C.SDL_TEXTUREMODULATE_NONE  // no modulation
+	TEXTUREMODULATE_COLOR TextureModulate = C.SDL_TEXTUREMODULATE_COLOR // srcC = srcC * color
+	TEXTUREMODULATE_ALPHA TextureModulate = C.SDL_TEXTUREMODULATE_ALPHA // srcA = srcA * alpha
 )
 
 // An enumeration of flags that can be used in the flip parameter for Renderer.CopyEx().
 // (https://wiki.libsdl.org/SDL_RendererFlip)
+type RendererFlip C.SDL_RendererFlip
+
 const (
 	FLIP_NONE       RendererFlip = C.SDL_FLIP_NONE       // do not flip
-	FLIP_HORIZONTAL              = C.SDL_FLIP_HORIZONTAL // flip horizontally
-	FLIP_VERTICAL                = C.SDL_FLIP_VERTICAL   // flip vertically
+	FLIP_HORIZONTAL RendererFlip = C.SDL_FLIP_HORIZONTAL // flip horizontally
+	FLIP_VERTICAL   RendererFlip = C.SDL_FLIP_VERTICAL   // flip vertically
 )
+
+func (flip RendererFlip) c() C.SDL_RendererFlip {
+	return C.SDL_RendererFlip(flip)
+}
 
 // RendererInfo contains information on the capabilities of a render driver or the current render context.
 // (https://wiki.libsdl.org/SDL_RendererInfo)
@@ -377,20 +373,11 @@ func (info *cRendererInfo) cptr() *C.SDL_RendererInfo {
 	return (*C.SDL_RendererInfo)(unsafe.Pointer(info))
 }
 
-// RendererFlip is an enumeration of flags that can be used in the flip parameter for Renderer.CopyEx().
-// (https://wiki.libsdl.org/SDL_RendererFlip)
-type RendererFlip uint32
-type cRendererFlip C.SDL_RendererFlip
-
 // Vertex structure
 type Vertex struct {
 	Position FPoint // Vertex position, in SDL_Renderer coordinates
 	Color    Color  // Vertex color
 	TexCoord FPoint // Normalized texture coordinates, if needed
-}
-
-func (flip RendererFlip) c() C.SDL_RendererFlip {
-	return C.SDL_RendererFlip(flip)
 }
 
 // GetNumRenderDrivers returns the number of 2D rendering drivers available for the current display.
@@ -416,7 +403,7 @@ func GetRenderDriverInfo(index int, info *RendererInfo) (int, error) {
 
 // CreateWindowAndRenderer returns a new window and default renderer.
 // (https://wiki.libsdl.org/SDL_CreateWindowAndRenderer)
-func CreateWindowAndRenderer(w, h int32, flags uint32) (*Window, *Renderer, error) {
+func CreateWindowAndRenderer(w, h int32, flags WindowFlags) (*Window, *Renderer, error) {
 	var window *C.SDL_Window
 	var renderer *C.SDL_Renderer
 	ret := C.SDL_CreateWindowAndRenderer(
@@ -433,7 +420,7 @@ func CreateWindowAndRenderer(w, h int32, flags uint32) (*Window, *Renderer, erro
 
 // CreateRenderer returns a new 2D rendering context for a window.
 // (https://wiki.libsdl.org/SDL_CreateRenderer)
-func CreateRenderer(window *Window, index int, flags uint32) (*Renderer, error) {
+func CreateRenderer(window *Window, index int, flags RendererFlags) (*Renderer, error) {
 	renderer := C.SDL_CreateRenderer(window.cptr(), C.int(index), C.Uint32(flags))
 	if renderer == nil {
 		return nil, GetError()
@@ -489,7 +476,7 @@ func (renderer *Renderer) GetOutputSize() (w, h int32, err error) {
 
 // CreateTexture returns a new texture for a rendering context.
 // (https://wiki.libsdl.org/SDL_CreateTexture)
-func (renderer *Renderer) CreateTexture(format uint32, access int, w, h int32) (*Texture, error) {
+func (renderer *Renderer) CreateTexture(format PixelFormatConstant, access TextureAccess, w, h int32) (*Texture, error) {
 	texture := C.SDL_CreateTexture(
 		renderer.cptr(),
 		C.Uint32(format),
@@ -570,9 +557,23 @@ func (texture *Texture) GetBlendMode() (bm BlendMode, err error) {
 	return bm, errorFromInt(int(ret))
 }
 
+// SetScaleMode Set the scale mode used for texture scale operations.
+// TODO: (https://wiki.libsdl.org/SDL_SetTextureScaleMode)
+func (texture *Texture) SetScaleMode(sm ScaleMode) error {
+	return errorFromInt(int(
+		C.SDL_SetTextureScaleMode(texture.cptr(), sm.c())))
+}
+
+// GetScaleMode returns the scale mode used for texture scale operations.
+// TODO: (https://wiki.libsdl.org/SDL_GetTextureScaleMode)
+func (texture *Texture) GetScaleMode() (sm ScaleMode, err error) {
+	ret := C.SDL_GetTextureScaleMode(texture.cptr(), sm.cptr())
+	return sm, errorFromInt(int(ret))
+}
+
 // Update updates the given texture rectangle with new pixel data.
 // (https://wiki.libsdl.org/SDL_UpdateTexture)
-func (texture *Texture) Update(rect *Rect, pixels unsafe.Pointer, pitch int) error {
+func (texture *Texture) Update(rect *Rect, pixels []byte, pitch int) error {
 	if pixels == nil {
 		return nil
 	}
@@ -580,7 +581,7 @@ func (texture *Texture) Update(rect *Rect, pixels unsafe.Pointer, pitch int) err
 		C.SDL_UpdateTexture(
 			texture.cptr(),
 			rect.cptr(),
-			pixels,
+			unsafe.Pointer(&pixels[0]),
 			C.int(pitch))))
 }
 
@@ -656,6 +657,16 @@ func (texture *Texture) Lock(rect *Rect) ([]byte, int, error) {
 	return b, int(pitch), nil
 }
 
+// LockToSurface locks a portion of the texture for write-only pixel access.
+// Expose it as a SDL surface.
+// (https://wiki.libsdl.org/SDL_LockTextureToSurface)
+func (texture *Texture) LockToSurface(rect *Rect) (surface *Surface, err error) {
+	_surface := surface.cptr()
+	ret := C.SDL_LockTextureToSurface(texture.cptr(), rect.cptr(), (**C.SDL_Surface)(&_surface))
+	err = errorFromInt(int(ret))
+	return
+}
+
 // Unlock unlocks a texture, uploading the changes to video memory, if needed.
 // (https://wiki.libsdl.org/SDL_UnlockTexture)
 func (texture *Texture) Unlock() {
@@ -711,6 +722,12 @@ func (renderer *Renderer) SetViewport(rect *Rect) error {
 func (renderer *Renderer) GetViewport() (rect Rect) {
 	C.SDL_RenderGetViewport(renderer.cptr(), rect.cptr())
 	return
+}
+
+// IsClipEnabled returns whether clipping is enabled on the given renderer.
+// (https://wiki.libsdl.org/SDL_RenderIsClipEnabled)
+func (renderer *Renderer) IsClipEnabled() bool {
+	return C.SDL_RenderIsClipEnabled(renderer.cptr()) == C.SDL_TRUE
 }
 
 // SetClipRect sets the clip rectangle for rendering on the specified target.
@@ -1042,7 +1059,7 @@ func (renderer *Renderer) CopyExF(texture *Texture, src *Rect, dst *FRect, angle
 
 // ReadPixels reads pixels from the current rendering target.
 // (https://wiki.libsdl.org/SDL_RenderReadPixels)
-func (renderer *Renderer) ReadPixels(rect *Rect, format uint32, pixels unsafe.Pointer, pitch int) error {
+func (renderer *Renderer) ReadPixels(rect *Rect, format PixelFormatConstant, pixels unsafe.Pointer, pitch int) error {
 	return errorFromInt(int(
 		C.SDL_RenderReadPixels(
 			renderer.cptr(),

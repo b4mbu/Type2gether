@@ -269,6 +269,31 @@ static const char* SDL_GameControllerGetAppleSFSymbolsNameForAxis(SDL_GameContro
 }
 
 #endif
+
+#if !(SDL_VERSION_ATLEAST(2,24,0))
+
+#if defined(WARN_OUTDATED)
+#pragma message("SDL_GameControllerPathForIndex is not supported before SDL 2.24.0")
+#pragma message("SDL_GameControllerPath is not supported before SDL 2.24.0")
+#pragma message("SDL_GameControllerGetFirmwareVersion is not supported before SDL 2.24.0")
+#endif
+
+static const char *SDL_GameControllerPathForIndex(int device_index)
+{
+	return NULL;
+}
+
+static const char *SDL_GameControllerPath(SDL_GameController *gamecontroller)
+{
+	return NULL;
+}
+
+static Uint16 SDL_GameControllerGetFirmwareVersion(SDL_GameController *gamecontroller)
+{
+	return 0;
+}
+
+#endif
 */
 import "C"
 import (
@@ -277,58 +302,70 @@ import (
 )
 
 // Types of game controller inputs.
-const (
-	CONTROLLER_BINDTYPE_NONE   = C.SDL_CONTROLLER_BINDTYPE_NONE
-	CONTROLLER_BINDTYPE_BUTTON = C.SDL_CONTROLLER_BINDTYPE_BUTTON
-	CONTROLLER_BINDTYPE_AXIS   = C.SDL_CONTROLLER_BINDTYPE_AXIS
-	CONTROLLER_BINDTYPE_HAT    = C.SDL_CONTROLLER_BINDTYPE_HAT
-)
-
-// An enumeration of axes available from a controller.
-// (https://wiki.libsdl.org/SDL_GameControllerAxis)
-const (
-	CONTROLLER_AXIS_INVALID      = C.SDL_CONTROLLER_AXIS_INVALID
-	CONTROLLER_AXIS_LEFTX        = C.SDL_CONTROLLER_AXIS_LEFTX
-	CONTROLLER_AXIS_LEFTY        = C.SDL_CONTROLLER_AXIS_LEFTY
-	CONTROLLER_AXIS_RIGHTX       = C.SDL_CONTROLLER_AXIS_RIGHTX
-	CONTROLLER_AXIS_RIGHTY       = C.SDL_CONTROLLER_AXIS_RIGHTY
-	CONTROLLER_AXIS_TRIGGERLEFT  = C.SDL_CONTROLLER_AXIS_TRIGGERLEFT
-	CONTROLLER_AXIS_TRIGGERRIGHT = C.SDL_CONTROLLER_AXIS_TRIGGERRIGHT
-	CONTROLLER_AXIS_MAX          = C.SDL_CONTROLLER_AXIS_MAX
-)
-
-// An enumeration of buttons available from a controller.
-// (https://wiki.libsdl.org/SDL_GameControllerButton)
-const (
-	CONTROLLER_BUTTON_INVALID       = C.SDL_CONTROLLER_BUTTON_INVALID
-	CONTROLLER_BUTTON_A             = C.SDL_CONTROLLER_BUTTON_A
-	CONTROLLER_BUTTON_B             = C.SDL_CONTROLLER_BUTTON_B
-	CONTROLLER_BUTTON_X             = C.SDL_CONTROLLER_BUTTON_X
-	CONTROLLER_BUTTON_Y             = C.SDL_CONTROLLER_BUTTON_Y
-	CONTROLLER_BUTTON_BACK          = C.SDL_CONTROLLER_BUTTON_BACK
-	CONTROLLER_BUTTON_GUIDE         = C.SDL_CONTROLLER_BUTTON_GUIDE
-	CONTROLLER_BUTTON_START         = C.SDL_CONTROLLER_BUTTON_START
-	CONTROLLER_BUTTON_LEFTSTICK     = C.SDL_CONTROLLER_BUTTON_LEFTSTICK
-	CONTROLLER_BUTTON_RIGHTSTICK    = C.SDL_CONTROLLER_BUTTON_RIGHTSTICK
-	CONTROLLER_BUTTON_LEFTSHOULDER  = C.SDL_CONTROLLER_BUTTON_LEFTSHOULDER
-	CONTROLLER_BUTTON_RIGHTSHOULDER = C.SDL_CONTROLLER_BUTTON_RIGHTSHOULDER
-	CONTROLLER_BUTTON_DPAD_UP       = C.SDL_CONTROLLER_BUTTON_DPAD_UP
-	CONTROLLER_BUTTON_DPAD_DOWN     = C.SDL_CONTROLLER_BUTTON_DPAD_DOWN
-	CONTROLLER_BUTTON_DPAD_LEFT     = C.SDL_CONTROLLER_BUTTON_DPAD_LEFT
-	CONTROLLER_BUTTON_DPAD_RIGHT    = C.SDL_CONTROLLER_BUTTON_DPAD_RIGHT
-	CONTROLLER_BUTTON_MAX           = C.SDL_CONTROLLER_BUTTON_MAX
-)
-
 // GameControllerBindType is a type of game controller input.
 type GameControllerBindType C.SDL_GameControllerBindType
 
+const (
+	CONTROLLER_BINDTYPE_NONE   GameControllerBindType = C.SDL_CONTROLLER_BINDTYPE_NONE
+	CONTROLLER_BINDTYPE_BUTTON GameControllerBindType = C.SDL_CONTROLLER_BINDTYPE_BUTTON
+	CONTROLLER_BINDTYPE_AXIS   GameControllerBindType = C.SDL_CONTROLLER_BINDTYPE_AXIS
+	CONTROLLER_BINDTYPE_HAT    GameControllerBindType = C.SDL_CONTROLLER_BINDTYPE_HAT
+)
+
+// An enumeration of axes available from a controller.
 // GameControllerAxis is an axis on a game controller.
 // (https://wiki.libsdl.org/SDL_GameControllerAxis)
 type GameControllerAxis C.SDL_GameControllerAxis
 
+const (
+	CONTROLLER_AXIS_INVALID      GameControllerAxis = C.SDL_CONTROLLER_AXIS_INVALID
+	CONTROLLER_AXIS_LEFTX        GameControllerAxis = C.SDL_CONTROLLER_AXIS_LEFTX
+	CONTROLLER_AXIS_LEFTY        GameControllerAxis = C.SDL_CONTROLLER_AXIS_LEFTY
+	CONTROLLER_AXIS_RIGHTX       GameControllerAxis = C.SDL_CONTROLLER_AXIS_RIGHTX
+	CONTROLLER_AXIS_RIGHTY       GameControllerAxis = C.SDL_CONTROLLER_AXIS_RIGHTY
+	CONTROLLER_AXIS_TRIGGERLEFT  GameControllerAxis = C.SDL_CONTROLLER_AXIS_TRIGGERLEFT
+	CONTROLLER_AXIS_TRIGGERRIGHT GameControllerAxis = C.SDL_CONTROLLER_AXIS_TRIGGERRIGHT
+	CONTROLLER_AXIS_MAX          GameControllerAxis = C.SDL_CONTROLLER_AXIS_MAX
+)
+
+// An enumeration of buttons available from a controller.
 // GameControllerButton is a button on a game controller.
 // (https://wiki.libsdl.org/SDL_GameControllerButton)
 type GameControllerButton C.SDL_GameControllerButton
+
+const (
+	CONTROLLER_BUTTON_INVALID       GameControllerButton = C.SDL_CONTROLLER_BUTTON_INVALID
+	CONTROLLER_BUTTON_A             GameControllerButton = C.SDL_CONTROLLER_BUTTON_A
+	CONTROLLER_BUTTON_B             GameControllerButton = C.SDL_CONTROLLER_BUTTON_B
+	CONTROLLER_BUTTON_X             GameControllerButton = C.SDL_CONTROLLER_BUTTON_X
+	CONTROLLER_BUTTON_Y             GameControllerButton = C.SDL_CONTROLLER_BUTTON_Y
+	CONTROLLER_BUTTON_BACK          GameControllerButton = C.SDL_CONTROLLER_BUTTON_BACK
+	CONTROLLER_BUTTON_GUIDE         GameControllerButton = C.SDL_CONTROLLER_BUTTON_GUIDE
+	CONTROLLER_BUTTON_START         GameControllerButton = C.SDL_CONTROLLER_BUTTON_START
+	CONTROLLER_BUTTON_LEFTSTICK     GameControllerButton = C.SDL_CONTROLLER_BUTTON_LEFTSTICK
+	CONTROLLER_BUTTON_RIGHTSTICK    GameControllerButton = C.SDL_CONTROLLER_BUTTON_RIGHTSTICK
+	CONTROLLER_BUTTON_LEFTSHOULDER  GameControllerButton = C.SDL_CONTROLLER_BUTTON_LEFTSHOULDER
+	CONTROLLER_BUTTON_RIGHTSHOULDER GameControllerButton = C.SDL_CONTROLLER_BUTTON_RIGHTSHOULDER
+	CONTROLLER_BUTTON_DPAD_UP       GameControllerButton = C.SDL_CONTROLLER_BUTTON_DPAD_UP
+	CONTROLLER_BUTTON_DPAD_DOWN     GameControllerButton = C.SDL_CONTROLLER_BUTTON_DPAD_DOWN
+	CONTROLLER_BUTTON_DPAD_LEFT     GameControllerButton = C.SDL_CONTROLLER_BUTTON_DPAD_LEFT
+	CONTROLLER_BUTTON_DPAD_RIGHT    GameControllerButton = C.SDL_CONTROLLER_BUTTON_DPAD_RIGHT
+	CONTROLLER_BUTTON_MAX           GameControllerButton = C.SDL_CONTROLLER_BUTTON_MAX
+)
+
+// The gamecontroller structure used to identify an SDL game controller
+type GameControllerType C.SDL_GameControllerType
+
+const (
+	CONTROLLER_TYPE_UNKNOWN             GameControllerType = C.SDL_CONTROLLER_TYPE_UNKNOWN
+	CONTROLLER_TYPE_XBOX360             GameControllerType = C.SDL_CONTROLLER_TYPE_XBOX360
+	CONTROLLER_TYPE_XBOXONE             GameControllerType = C.SDL_CONTROLLER_TYPE_XBOXONE
+	CONTROLLER_TYPE_PS3                 GameControllerType = C.SDL_CONTROLLER_TYPE_PS3
+	CONTROLLER_TYPE_PS4                 GameControllerType = C.SDL_CONTROLLER_TYPE_PS4
+	CONTROLLER_TYPE_NINTENDO_SWITCH_PRO GameControllerType = C.SDL_CONTROLLER_TYPE_NINTENDO_SWITCH_PRO
+	CONTROLLER_TYPE_VIRTUAL             GameControllerType = C.SDL_CONTROLLER_TYPE_VIRTUAL
+	CONTROLLER_TYPE_PS5                 GameControllerType = C.SDL_CONTROLLER_TYPE_PS5
+)
 
 // GameController used to identify an SDL game controller.
 type GameController C.SDL_GameController
@@ -352,7 +389,7 @@ func (btn GameControllerButton) c() C.SDL_GameControllerButton {
 // (https://wiki.libsdl.org/SDL_GameControllerAddMapping)
 func GameControllerAddMapping(mappingString string) int {
 	_mappingString := C.CString(mappingString)
-	defer C.free(unsafe.Pointer(_mappingString))
+	defer C.SDL_free(unsafe.Pointer(_mappingString))
 	return int(C.SDL_GameControllerAddMapping(_mappingString))
 }
 
@@ -364,7 +401,7 @@ func GameControllerNumMappings() int {
 // GameControllerMappingForIndex returns the game controller mapping string at a particular index.
 func GameControllerMappingForIndex(index int) string {
 	mappingString := C.SDL_GameControllerMappingForIndex(C.int(index))
-	defer C.free(unsafe.Pointer(mappingString))
+	defer C.SDL_free(unsafe.Pointer(mappingString))
 	return C.GoString(mappingString)
 }
 
@@ -372,7 +409,7 @@ func GameControllerMappingForIndex(index int) string {
 // (https://wiki.libsdl.org/SDL_GameControllerMappingForGUID)
 func GameControllerMappingForGUID(guid JoystickGUID) string {
 	mappingString := C.SDL_GameControllerMappingForGUID(guid.c())
-	defer C.free(unsafe.Pointer(mappingString))
+	defer C.SDL_free(unsafe.Pointer(mappingString))
 	return C.GoString(mappingString)
 }
 
@@ -388,10 +425,22 @@ func GameControllerNameForIndex(index int) string {
 	return C.GoString(C.SDL_GameControllerNameForIndex(C.int(index)))
 }
 
+// GameControllerPathForIndex returns the implementation dependent path for the game controller.
+// (https://wiki.libsdl.org/SDL_GameControllerPathForIndex)
+func GameControllerPathForIndex(index int) string {
+	return (C.GoString)(C.SDL_GameControllerPathForIndex(C.int(index)))
+}
+
+// GameControllerTypeForIndex the type of a game controller.
+// (https://wiki.libsdl.org/SDL_GameControllerTypeForIndex)
+func GameControllerTypeForIndex(index int) GameControllerType {
+	return GameControllerType(C.SDL_GameControllerTypeForIndex(C.int(index)))
+}
+
 // GameControllerMappingForDeviceIndex returns the game controller mapping string at a particular index.
 func GameControllerMappingForDeviceIndex(index int) string {
 	mappingString := C.SDL_GameControllerMappingForDeviceIndex(C.int(index))
-	defer C.free(unsafe.Pointer(mappingString))
+	defer C.SDL_free(unsafe.Pointer(mappingString))
 	return C.GoString(mappingString)
 }
 
@@ -407,16 +456,40 @@ func GameControllerFromInstanceID(joyid JoystickID) *GameController {
 	return (*GameController)(C.SDL_GameControllerFromInstanceID(joyid.c()))
 }
 
+// GameControllerFromPlayerIndex returns associated with a player index.
+// (https://wiki.libsdl.org/SDL_GameControllerFromPlayerIndex)
+func GameControllerFromPlayerIndex(playerIndex int) *GameController {
+	return (*GameController)(C.SDL_GameControllerFromPlayerIndex(C.int(playerIndex)))
+}
+
 // Name returns the implementation dependent name for an opened game controller.
 // (https://wiki.libsdl.org/SDL_GameControllerName)
 func (ctrl *GameController) Name() string {
 	return C.GoString(C.SDL_GameControllerName(ctrl.cptr()))
 }
 
+// Path returns the implementation dependent path of an opened game controller.
+// (https://wiki.libsdl.org/SDL_GameControllerPath)
+func (ctrl *GameController) Path() string {
+	return (C.GoString)(C.SDL_GameControllerPath(ctrl.cptr()))
+}
+
+// Type returns the type of this currently opened controller
+// TODO: (https://wiki.libsdl.org/SDL_GameControllerType)
+func (ctrl *GameController) Type() GameControllerType {
+	return GameControllerType(C.SDL_GameControllerGetType(ctrl.cptr()))
+}
+
 // PlayerIndex the player index of an opened game controller, or -1 if it's not available.
 // TODO: (https://wiki.libsdl.org/SDL_GameControllerGetPlayerIndex)
 func (ctrl *GameController) PlayerIndex() int {
 	return int(C.SDL_GameControllerGetPlayerIndex(ctrl.cptr()))
+}
+
+// SetPlayerIndex sets the player index of an opened game controller.
+// TODO: (https://wiki.libsdl.org/SDL_GameControllerSetPlayerIndex)
+func (ctrl *GameController) SetPlayerIndex(playerIndex int) {
+	C.SDL_GameControllerSetPlayerIndex(ctrl.cptr(), C.int(playerIndex))
 }
 
 // Vendor returns the USB vendor ID of an opened controller, if available, 0 otherwise.
@@ -434,6 +507,18 @@ func (ctrl *GameController) ProductVersion() int {
 	return int(C.SDL_GameControllerGetProductVersion(ctrl.cptr()))
 }
 
+// FirmwareVersion returns the firmware version of an opened controller, if available.
+// (https://wiki.libsdl.org/SDL_GameControllerGetFirmwareVersion)
+func (ctrl *GameController) FirmwareVersion() uint16 {
+	return uint16(C.SDL_GameControllerGetFirmwareVersion(ctrl.cptr()))
+}
+
+// Serial returns the serial number of an opened controller, if available.
+// TODO: (https://wiki.libsdl.org/SDL_GameControllerGetSerial)
+func (ctrl *GameController) Serial() string {
+	return C.GoString(C.SDL_GameControllerGetSerial(ctrl.cptr()))
+}
+
 // Attached reports whether a controller has been opened and is currently connected.
 // (https://wiki.libsdl.org/SDL_GameControllerGetAttached)
 func (ctrl *GameController) Attached() bool {
@@ -444,7 +529,7 @@ func (ctrl *GameController) Attached() bool {
 // (https://wiki.libsdl.org/SDL_GameControllerMapping)
 func (ctrl *GameController) Mapping() string {
 	mappingString := C.SDL_GameControllerMapping(ctrl.cptr())
-	defer C.free(unsafe.Pointer(mappingString))
+	defer C.SDL_free(unsafe.Pointer(mappingString))
 	return C.GoString(mappingString)
 }
 
@@ -470,7 +555,7 @@ func GameControllerUpdate() {
 // (https://wiki.libsdl.org/SDL_GameControllerGetAxisFromString)
 func GameControllerGetAxisFromString(pchString string) GameControllerAxis {
 	_pchString := C.CString(pchString)
-	defer C.free(unsafe.Pointer(_pchString))
+	defer C.SDL_free(unsafe.Pointer(_pchString))
 	return GameControllerAxis(C.SDL_GameControllerGetAxisFromString(_pchString))
 }
 
@@ -486,6 +571,12 @@ func (ctrl *GameController) BindForAxis(axis GameControllerAxis) GameControllerB
 	return GameControllerButtonBind(C.SDL_GameControllerGetBindForAxis(ctrl.cptr(), axis.c()))
 }
 
+// HasAxis returns whether a game controller has a given axis.
+// TODO: (https://wiki.libsdl.org/SDL_GameControllerHasAxis)
+func (ctrl *GameController) HasAxis(axis GameControllerAxis) bool {
+	return C.SDL_GameControllerHasAxis(ctrl.cptr(), axis.c()) == C.SDL_TRUE
+}
+
 // Axis returns the current state of an axis control on a game controller.
 // (https://wiki.libsdl.org/SDL_GameControllerGetAxis)
 func (ctrl *GameController) Axis(axis GameControllerAxis) int16 {
@@ -496,7 +587,7 @@ func (ctrl *GameController) Axis(axis GameControllerAxis) int16 {
 // (https://wiki.libsdl.org/SDL_GameControllerGetButtonFromString)
 func GameControllerGetButtonFromString(pchString string) GameControllerButton {
 	_pchString := C.CString(pchString)
-	defer C.free(unsafe.Pointer(_pchString))
+	defer C.SDL_free(unsafe.Pointer(_pchString))
 	return GameControllerButton(C.SDL_GameControllerGetButtonFromString(_pchString))
 }
 
@@ -510,6 +601,12 @@ func GameControllerGetStringForButton(btn GameControllerButton) string {
 // (https://wiki.libsdl.org/SDL_GameControllerGetBindForButton)
 func (ctrl *GameController) BindForButton(btn GameControllerButton) GameControllerButtonBind {
 	return GameControllerButtonBind(C.SDL_GameControllerGetBindForButton(ctrl.cptr(), btn.c()))
+}
+
+// HasButton returns whether a game controller has a given button.
+// (https://wiki.libsdl.org/SDL_GameControllerHasButton)
+func (ctrl *GameController) HasButton(btn GameControllerButton) bool {
+	return C.SDL_GameControllerHasButton(ctrl.cptr(), btn.c()) == C.SDL_TRUE
 }
 
 // Rumble triggers a rumble effect
@@ -526,10 +623,72 @@ func (ctrl *GameController) Rumble(lowFrequencyRumble, highFrequencyRumble uint1
 	return errorFromInt(int(C.SDL_GameControllerRumble(ctrl.cptr(), C.Uint16(lowFrequencyRumble), C.Uint16(highFrequencyRumble), C.Uint32(durationMS))))
 }
 
+// RumbleTriggers starts a rumble effect in the game controller's triggers.
+// TODO: (https://wiki.libsdl.org/SDL_GameControllerRumbleTriggers)
+func (ctrl *GameController) RumbleTriggers(leftRumble, rightRumble uint16, durationMS uint32) error {
+	return errorFromInt(int(C.SDL_GameControllerRumble(ctrl.cptr(), C.Uint16(leftRumble), C.Uint16(rightRumble), C.Uint32(durationMS))))
+}
+
+// HasLED returns whether a controller has an LED.
+// TODO: (https://wiki.libsdl.org/SDL_GameControllerHasLED)
+func (ctrl *GameController) HasLED() bool {
+	return C.SDL_GameControllerHasLED(ctrl.cptr()) == C.SDL_TRUE
+}
+
+// SetLED updates a controller's LED color.
+// TODO: (https://wiki.libsdl.org/SDL_GameControllerSetLED)
+func (ctrl *GameController) SetLED(red, green, blue uint8) error {
+	return errorFromInt(int(C.SDL_GameControllerSetLED(ctrl.cptr(), C.Uint8(red), C.Uint8(blue), C.Uint8(green))))
+}
+
 // Button returns the current state of a button on a game controller.
 // (https://wiki.libsdl.org/SDL_GameControllerGetButton)
 func (ctrl *GameController) Button(btn GameControllerButton) byte {
 	return byte(C.SDL_GameControllerGetButton(ctrl.cptr(), btn.c()))
+}
+
+// NumTouchpads returns the number of touchpads on a game controller.
+// TODO: (https://wiki.libsdl.org/SDL_GameControllerGetNumTouchpads)
+func (ctrl *GameController) NumTouchpads() int {
+	return int(C.SDL_GameControllerGetNumTouchpads(ctrl.cptr()))
+}
+
+// NumTouchpadFingers returns the number of supported simultaneous fingers on a touchpad on a game controller.
+// TODO: (https://wiki.libsdl.org/SDL_GameControllerGetNumTouchpadFingers)
+func (ctrl *GameController) NumTouchpadFingers(touchpad int) int {
+	return int(C.SDL_GameControllerGetNumTouchpadFingers(ctrl.cptr(), C.int(touchpad)))
+}
+
+// TouchpadFinger returns the current state of a finger on a touchpad on a game controller.
+// TODO: (https://wiki.libsdl.org/SDL_GameControllerGetTouchpadFinger)
+func (ctrl *GameController) TouchpadFinger(touchpad, finger int) (state uint8, x, y, pressure float32) {
+	C.SDL_GameControllerGetTouchpadFinger(ctrl.cptr(), C.int(touchpad), C.int(finger), (*C.Uint8)(&state), (*C.float)(&x), (*C.float)(&y), (*C.float)(&pressure))
+	return
+}
+
+// HasSensor returns whether a game controller has a particular sensor.
+// TODO: (https://wiki.libsdl.org/SDL_GameControllerHasSensor)
+func (ctrl *GameController) HasSensor(typ SensorType) bool {
+	return C.SDL_GameControllerHasSensor(ctrl.cptr(), C.SDL_SensorType(typ)) == C.SDL_TRUE
+}
+
+// SetSensorEnabled sets whether data reporting for a game controller sensor is enabled.
+// TODO: (https://wiki.libsdl.org/SDL_GameControllerSetSensorEnabled)
+func (ctrl *GameController) SetSensorEnabled(typ SensorType, enabled bool) error {
+	return errorFromInt(int(C.SDL_GameControllerSetSensorEnabled(ctrl.cptr(), C.SDL_SensorType(typ), C.SDL_bool(Btoi(enabled)))))
+}
+
+// IsSensorEnabled queries whether sensor data reporting is enabled for a game controller.
+// TODO: (https://wiki.libsdl.org/SDL_GameControllerIsSensorEnabled)
+func (ctrl *GameController) IsSensorEnabled(typ SensorType) bool {
+	return C.SDL_GameControllerIsSensorEnabled(ctrl.cptr(), C.SDL_SensorType(typ)) == C.SDL_TRUE
+}
+
+// SensorData returns the current state of a game controller sensor.
+// TODO: (https://wiki.libsdl.org/SDL_GameControllerGetSensorData)
+func (ctrl *GameController) SensorData(typ SensorType, numValues int) (data []float32, err error) {
+	err = errorFromInt(int(C.SDL_GameControllerGetSensorData(ctrl.cptr(), C.SDL_SensorType(typ), (*C.float)(&data[0]), C.int(numValues))))
+	return
 }
 
 // Close closes a game controller previously opened with GameControllerOpen().

@@ -8,7 +8,7 @@ void Do_TTF_SetError(const char *str) {
     TTF_SetError("%s", str);
 }
 
-#if SDL_TTF_MAJOR_VERSION == 2 && SDL_TTF_MINOR_VERSION == 0 && SDL_TTF_PATCHLEVEL >= 18
+#if SDL_TTF_VERSION_ATLEAST(2,0,18)
 static inline void ByteSwappedUNICODE(int swapped)
 {
 	TTF_ByteSwappedUNICODE(swapped ? SDL_TRUE : SDL_FALSE);
@@ -29,20 +29,24 @@ import (
 )
 
 // Hinting settings.
+type Hinting int
+
 const (
-	HINTING_NORMAL = int(C.TTF_HINTING_NORMAL)
-	HINTING_LIGHT  = int(C.TTF_HINTING_LIGHT)
-	HINTING_MONO   = int(C.TTF_HINTING_MONO)
-	HINTING_NONE   = int(C.TTF_HINTING_NONE)
+	HINTING_NORMAL Hinting = C.TTF_HINTING_NORMAL
+	HINTING_LIGHT  Hinting = C.TTF_HINTING_LIGHT
+	HINTING_MONO   Hinting = C.TTF_HINTING_MONO
+	HINTING_NONE   Hinting = C.TTF_HINTING_NONE
 )
 
 // Font rendering styles.
+type Style int
+
 const (
-	STYLE_NORMAL        = 0
-	STYLE_BOLD          = 0x01
-	STYLE_ITALIC        = 0x02
-	STYLE_UNDERLINE     = 0x04
-	STYLE_STRIKETHROUGH = 0x08
+	STYLE_NORMAL        Style = C.TTF_STYLE_NORMAL
+	STYLE_BOLD          Style = C.TTF_STYLE_BOLD
+	STYLE_ITALIC        Style = C.TTF_STYLE_ITALIC
+	STYLE_UNDERLINE     Style = C.TTF_STYLE_UNDERLINE
+	STYLE_STRIKETHROUGH Style = C.TTF_STYLE_STRIKETHROUGH
 )
 
 // Font contains font information.
@@ -281,25 +285,25 @@ func (f *Font) Faces() int { return int(C.TTF_FontFaces(f.f)) }
 
 // GetStyle returns the rendering style of the loaded font.
 // (https://www.libsdl.org/projects/SDL_ttf/docs/SDL_ttf_21.html)
-func (f *Font) GetStyle() int {
-	return int(C.TTF_GetFontStyle(f.f))
+func (f *Font) GetStyle() Style {
+	return Style(C.TTF_GetFontStyle(f.f))
 }
 
 // SetStyle sets the rendering style of the loaded font.
 // (https://www.libsdl.org/projects/SDL_ttf/docs/SDL_ttf_22.html)
-func (f *Font) SetStyle(style int) {
+func (f *Font) SetStyle(style Style) {
 	C.TTF_SetFontStyle(f.f, C.int(style))
 }
 
 // GetHinting returns the current hinting setting of the loaded font.
 // (https://www.libsdl.org/projects/SDL_ttf/docs/SDL_ttf_25.html)
-func (f *Font) GetHinting() int {
-	return int(C.TTF_GetFontHinting(f.f))
+func (f *Font) GetHinting() Hinting {
+	return Hinting(C.TTF_GetFontHinting(f.f))
 }
 
 // SetHinting sets the hinting of the loaded font.
 // (https://www.libsdl.org/projects/SDL_ttf/docs/SDL_ttf_26.html)
-func (f *Font) SetHinting(hinting int) {
+func (f *Font) SetHinting(hinting Hinting) {
 	C.TTF_SetFontHinting(f.f, C.int(hinting))
 }
 
@@ -343,6 +347,14 @@ func (f *Font) FaceFamilyName() string {
 	_fname := C.TTF_FontFaceFamilyName(f.f)
 	fname := C.GoString(_fname)
 	return fname
+}
+
+// FaceStyleName returns the current font face family's style name from the loaded font.
+// (https://wiki.libsdl.org/SDL_ttf/TTF_FontFaceStyleName)
+func (f *Font) FaceStyleName() string {
+        _fname := C.TTF_FontFaceStyleName(f.f)
+        fname := C.GoString(_fname)
+        return fname
 }
 
 // GlyphMetrics contains glyph-specific rendering metrics.

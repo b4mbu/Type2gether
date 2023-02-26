@@ -3,6 +3,19 @@ package sdl
 /*
 #include "sdl_wrapper.h"
 
+#if !(SDL_VERSION_ATLEAST(2,24,0))
+
+#if defined(WARN_OUTDATED)
+#pragma message("SDL_ResetKeyboard is not supported before SDL 2.24.0")
+#endif
+
+static inline void SDL_ResetKeyboard(void)
+{
+	return;
+}
+
+#endif
+
 #if !(SDL_VERSION_ATLEAST(2,0,22))
 
 #if defined(WARN_OUTDATED)
@@ -88,7 +101,7 @@ func GetScancodeName(code Scancode) string {
 // (https://wiki.libsdl.org/SDL_GetScancodeFromName)
 func GetScancodeFromName(name string) Scancode {
 	_name := C.CString(name)
-	defer C.free(unsafe.Pointer(_name))
+	defer C.SDL_free(unsafe.Pointer(_name))
 	return (Scancode)(C.SDL_GetScancodeFromName(_name))
 }
 
@@ -102,7 +115,7 @@ func GetKeyName(code Keycode) string {
 // (https://wiki.libsdl.org/SDL_GetKeyFromName)
 func GetKeyFromName(name string) Keycode {
 	_name := C.CString(name)
-	defer C.free(unsafe.Pointer(_name))
+	defer C.SDL_free(unsafe.Pointer(_name))
 	return (Keycode)(C.SDL_GetKeyFromName(_name))
 }
 

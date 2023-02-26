@@ -3,6 +3,19 @@ package sdl
 /*
 #include "sdl_wrapper.h"
 
+#if !(SDL_VERSION_ATLEAST(2,0,14))
+
+#if defined(WARN_OUTDATED)
+#pragma message("SDL_HasSurfaceRLE is not supported before SDL 2.0.14")
+#endif
+
+static SDL_bool SDL_HasSurfaceRLE(SDL_Surface * surface)
+{
+	return SDL_FALSE;
+}
+
+#endif
+
 #if !(SDL_VERSION_ATLEAST(2,0,9))
 
 #if defined(WARN_OUTDATED)
@@ -136,9 +149,9 @@ type YUV_CONVERSION_MODE C.SDL_YUV_CONVERSION_MODE
 // YUV Conversion Modes
 const (
 	YUV_CONVERSION_JPEG      YUV_CONVERSION_MODE = C.SDL_YUV_CONVERSION_JPEG      // Full range JPEG
-	YUV_CONVERSION_BT601                         = C.SDL_YUV_CONVERSION_BT601     // BT.601 (the default)
-	YUV_CONVERSION_BT709                         = C.SDL_YUV_CONVERSION_BT709     // BT.709
-	YUV_CONVERSION_AUTOMATIC                     = C.SDL_YUV_CONVERSION_AUTOMATIC // BT.601 for SD content, BT.709 for HD content
+	YUV_CONVERSION_BT601     YUV_CONVERSION_MODE = C.SDL_YUV_CONVERSION_BT601     // BT.601 (the default)
+	YUV_CONVERSION_BT709     YUV_CONVERSION_MODE = C.SDL_YUV_CONVERSION_BT709     // BT.709
+	YUV_CONVERSION_AUTOMATIC YUV_CONVERSION_MODE = C.SDL_YUV_CONVERSION_AUTOMATIC // BT.601 for SD content, BT.709 for HD content
 )
 
 // Surface contains a collection of pixels used in software blitting.
@@ -326,6 +339,12 @@ func (surface *Surface) SetRLE(flag bool) error {
 		return GetError()
 	}
 	return nil
+}
+
+// HasRLE returns whether the surface is RLE enabled.
+// (https://wiki.libsdl.org/SDL_HasSurfaceRLE)
+func (surface *Surface) HasRLE() bool {
+	return C.SDL_HasSurfaceRLE(surface.cptr()) == C.SDL_TRUE
 }
 
 // SetColorKey sets the color key (transparent pixel) in the surface.
@@ -575,10 +594,10 @@ func (surface *Surface) Duplicate() (newSurface *Surface, err error) {
 // ColorModel returns the color model used by this Surface.
 func (surface *Surface) ColorModel() color.Model {
 	switch surface.Format.Format {
-	case PIXELFORMAT_ARGB8888, PIXELFORMAT_ABGR8888:
-		return color.RGBAModel
-	case PIXELFORMAT_RGB888:
-		return color.RGBAModel
+	case PIXELFORMAT_ARGB8888:
+		return ARGB8888Model
+	case PIXELFORMAT_ABGR8888:
+		return ABGR8888Model
 	case PIXELFORMAT_RGB444:
 		return RGB444Model
 	case PIXELFORMAT_RGB332:
@@ -591,6 +610,10 @@ func (surface *Surface) ColorModel() color.Model {
 		return BGR555Model
 	case PIXELFORMAT_BGR565:
 		return BGR565Model
+	case PIXELFORMAT_RGB888:
+		return RGB888Model
+	case PIXELFORMAT_BGR888:
+		return BGR888Model
 	case PIXELFORMAT_ARGB4444:
 		return ARGB4444Model
 	case PIXELFORMAT_ABGR4444:
@@ -638,27 +661,27 @@ func (surface *Surface) Set(x, y int, c color.Color) {
 	i := int32(y)*surface.Pitch + int32(x)*int32(surface.Format.BytesPerPixel)
 	switch surface.Format.Format {
 	case PIXELFORMAT_ARGB8888:
-		col := surface.ColorModel().Convert(c).(color.RGBA)
-		pix[i+0] = col.B
-		pix[i+1] = col.G
-		pix[i+2] = col.R
+		col := surface.ColorModel().Convert(c).(ARGB8888)
 		pix[i+3] = col.A
+		pix[i+2] = col.R
+		pix[i+1] = col.G
+		pix[i+0] = col.B
 	case PIXELFORMAT_ABGR8888:
-		col := surface.ColorModel().Convert(c).(color.RGBA)
-		pix[i+3] = col.R
-		pix[i+2] = col.G
-		pix[i+1] = col.B
-		pix[i+0] = col.A
+		col := surface.ColorModel().Convert(c).(ABGR8888)
+		pix[i+3] = col.A
+		pix[i+2] = col.B
+		pix[i+1] = col.G
+		pix[i+0] = col.R
 	case PIXELFORMAT_RGB24, PIXELFORMAT_RGB888:
-		col := surface.ColorModel().Convert(c).(color.RGBA)
-		pix[i+0] = col.B
-		pix[i+1] = col.G
+		col := surface.ColorModel().Convert(c).(RGB888)
 		pix[i+2] = col.R
+		pix[i+1] = col.G
+		pix[i+0] = col.B
 	case PIXELFORMAT_BGR24, PIXELFORMAT_BGR888:
-		col := surface.ColorModel().Convert(c).(color.RGBA)
-		pix[i+2] = col.R
+		col := surface.ColorModel().Convert(c).(BGR888)
+		pix[i+2] = col.B
 		pix[i+1] = col.G
-		pix[i+0] = col.B
+		pix[i+0] = col.R
 	case PIXELFORMAT_RGB444:
 		col := surface.ColorModel().Convert(c).(RGB444)
 		buf := (*uint32)(unsafe.Pointer(&pix[i]))
@@ -784,7 +807,7 @@ func (surface *Surface) Set(x, y int, c color.Color) {
 		pix[i+1] = col.B
 		pix[i+0] = col.A
 	case PIXELFORMAT_BGRA8888:
-		col := surface.ColorModel().Convert(c).(color.RGBA)
+		col := surface.ColorModel().Convert(c).(BGRA8888)
 		pix[i+3] = col.B
 		pix[i+2] = col.G
 		pix[i+1] = col.R

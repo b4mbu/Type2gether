@@ -1,33 +1,46 @@
 package sdl
 
-// #include "sdl_wrapper.h"
-//
-// #if !(SDL_VERSION_ATLEAST(2,0,5))
-//
-// enum
-// {
-// #if SDL_BYTEORDER == SDL_BIG_ENDIAN
-//     SDL_PIXELFORMAT_RGBA32 = SDL_PIXELFORMAT_RGBA8888,
-//     SDL_PIXELFORMAT_ARGB32 = SDL_PIXELFORMAT_ARGB8888,
-//     SDL_PIXELFORMAT_BGRA32 = SDL_PIXELFORMAT_BGRA8888,
-//     SDL_PIXELFORMAT_ABGR32 = SDL_PIXELFORMAT_ABGR8888
-// #else
-//     SDL_PIXELFORMAT_RGBA32 = SDL_PIXELFORMAT_ABGR8888,
-//     SDL_PIXELFORMAT_ARGB32 = SDL_PIXELFORMAT_BGRA8888,
-//     SDL_PIXELFORMAT_BGRA32 = SDL_PIXELFORMAT_ARGB8888,
-//     SDL_PIXELFORMAT_ABGR32 = SDL_PIXELFORMAT_RGBA8888
-// #endif
-// };
-//
-// #endif
-//
-// int bytesPerPixel(Uint32 format) {
-//   return SDL_BYTESPERPIXEL(format);
-// }
-//
-// int bitsPerPixel(Uint32 format) {
-//   return SDL_BITSPERPIXEL(format);
-// }
+/*
+#include "sdl_wrapper.h"
+
+#if !(SDL_VERSION_ATLEAST(2,0,14))
+
+#define SDL_PIXELFORMAT_XRGB1555 (SDL_DEFINE_PIXELFORMAT(SDL_PIXELTYPE_PACKED16, SDL_PACKEDORDER_XRGB, SDL_PACKEDLAYOUT_1555, 15, 2))
+#define SDL_PIXELFORMAT_XBGR1555 (SDL_DEFINE_PIXELFORMAT(SDL_PIXELTYPE_PACKED16, SDL_PACKEDORDER_XBGR, SDL_PACKEDLAYOUT_1555, 15, 2))
+#define SDL_PIXELFORMAT_XRGB4444 (SDL_DEFINE_PIXELFORMAT(SDL_PIXELTYPE_PACKED16, SDL_PACKEDORDER_XRGB, SDL_PACKEDLAYOUT_4444, 12, 2))
+#define SDL_PIXELFORMAT_XBGR4444 (SDL_DEFINE_PIXELFORMAT(SDL_PIXELTYPE_PACKED16, SDL_PACKEDORDER_XBGR, SDL_PACKEDLAYOUT_4444, 12, 2))
+#define SDL_PIXELFORMAT_XRGB8888 (SDL_DEFINE_PIXELFORMAT(SDL_PIXELTYPE_PACKED32, SDL_PACKEDORDER_XRGB, SDL_PACKEDLAYOUT_8888, 24, 4))
+#define SDL_PIXELFORMAT_XBGR8888 (SDL_DEFINE_PIXELFORMAT(SDL_PIXELTYPE_PACKED32, SDL_PACKEDORDER_XBGR, SDL_PACKEDLAYOUT_8888, 24, 4))
+
+#endif
+
+#if !(SDL_VERSION_ATLEAST(2,0,5))
+
+enum
+{
+#if SDL_BYTEORDER == SDL_BIG_ENDIAN
+    SDL_PIXELFORMAT_RGBA32 = SDL_PIXELFORMAT_RGBA8888,
+    SDL_PIXELFORMAT_ARGB32 = SDL_PIXELFORMAT_ARGB8888,
+    SDL_PIXELFORMAT_BGRA32 = SDL_PIXELFORMAT_BGRA8888,
+    SDL_PIXELFORMAT_ABGR32 = SDL_PIXELFORMAT_ABGR8888
+#else
+    SDL_PIXELFORMAT_RGBA32 = SDL_PIXELFORMAT_ABGR8888,
+    SDL_PIXELFORMAT_ARGB32 = SDL_PIXELFORMAT_BGRA8888,
+    SDL_PIXELFORMAT_BGRA32 = SDL_PIXELFORMAT_ARGB8888,
+    SDL_PIXELFORMAT_ABGR32 = SDL_PIXELFORMAT_RGBA8888
+#endif
+};
+
+#endif
+
+int bytesPerPixel(Uint32 format) {
+  return SDL_BYTESPERPIXEL(format);
+}
+
+int bitsPerPixel(Uint32 format) {
+  return SDL_BITSPERPIXEL(format);
+}
+*/
 import "C"
 import (
 	"image/color"
@@ -37,25 +50,25 @@ import (
 // PixelFormat contains pixel format information.
 // (https://wiki.libsdl.org/SDL_PixelFormat)
 type PixelFormat struct {
-	Format        uint32       // one of the PIXELFORMAT values (https://wiki.libsdl.org/SDL_PixelFormatEnum)
-	Palette       *Palette     // palette structure associated with this pixel format, or nil if the format doesn't have a palette (https://wiki.libsdl.org/SDL_Palette)
-	BitsPerPixel  uint8        // the number of significant bits in a pixel value, eg: 8, 15, 16, 24, 32
-	BytesPerPixel uint8        // the number of bytes required to hold a pixel value, eg: 1, 2, 3, 4
-	_             [2]uint8     // padding
-	Rmask         uint32       // a mask representing the location of the red component of the pixel
-	Gmask         uint32       // a mask representing the location of the green component of the pixel
-	Bmask         uint32       // a mask representing the location of the blue component of the pixel
-	Amask         uint32       // a mask representing the location of the alpha component of the pixel or 0 if the pixel format doesn't have any alpha information
-	rLoss         uint8        // (internal use)
-	gLoss         uint8        // (internal use)
-	bLoss         uint8        // (internal use)
-	aLoss         uint8        // (internal use)
-	rShift        uint8        // (internal use)
-	gShift        uint8        // (internal use)
-	bShift        uint8        // (internal use)
-	aShift        uint8        // (internal use)
-	refCount      int32        // (internal use)
-	next          *PixelFormat // (internal use)
+	Format        PixelFormatConstant // one of the PIXELFORMAT values (https://wiki.libsdl.org/SDL_PixelFormatEnum)
+	Palette       *Palette            // palette structure associated with this pixel format, or nil if the format doesn't have a palette (https://wiki.libsdl.org/SDL_Palette)
+	BitsPerPixel  uint8               // the number of significant bits in a pixel value, eg: 8, 15, 16, 24, 32
+	BytesPerPixel uint8               // the number of bytes required to hold a pixel value, eg: 1, 2, 3, 4
+	_             [2]uint8            // padding
+	Rmask         uint32              // a mask representing the location of the red component of the pixel
+	Gmask         uint32              // a mask representing the location of the green component of the pixel
+	Bmask         uint32              // a mask representing the location of the blue component of the pixel
+	Amask         uint32              // a mask representing the location of the alpha component of the pixel or 0 if the pixel format doesn't have any alpha information
+	rLoss         uint8               // (internal use)
+	gLoss         uint8               // (internal use)
+	bLoss         uint8               // (internal use)
+	aLoss         uint8               // (internal use)
+	rShift        uint8               // (internal use)
+	gShift        uint8               // (internal use)
+	bShift        uint8               // (internal use)
+	aShift        uint8               // (internal use)
+	refCount      int32               // (internal use)
+	next          *PixelFormat        // (internal use)
 }
 type cPixelFormat C.SDL_PixelFormat
 
@@ -143,52 +156,61 @@ const (
 	PACKEDLAYOUT_1010102 = C.SDL_PACKEDLAYOUT_1010102
 )
 
+//go:generate stringer -type=PixelFormatConstant
+type PixelFormatConstant uint32
+
 // Pixel format values.
 const (
-	PIXELFORMAT_UNKNOWN     = C.SDL_PIXELFORMAT_UNKNOWN
-	PIXELFORMAT_INDEX1LSB   = C.SDL_PIXELFORMAT_INDEX1LSB
-	PIXELFORMAT_INDEX1MSB   = C.SDL_PIXELFORMAT_INDEX1MSB
-	PIXELFORMAT_INDEX4LSB   = C.SDL_PIXELFORMAT_INDEX4LSB
-	PIXELFORMAT_INDEX4MSB   = C.SDL_PIXELFORMAT_INDEX4MSB
-	PIXELFORMAT_INDEX8      = C.SDL_PIXELFORMAT_INDEX8
-	PIXELFORMAT_RGB332      = C.SDL_PIXELFORMAT_RGB332
-	PIXELFORMAT_RGB444      = C.SDL_PIXELFORMAT_RGB444
-	PIXELFORMAT_RGB555      = C.SDL_PIXELFORMAT_RGB555
-	PIXELFORMAT_BGR555      = C.SDL_PIXELFORMAT_BGR555
-	PIXELFORMAT_ARGB4444    = C.SDL_PIXELFORMAT_ARGB4444
-	PIXELFORMAT_RGBA4444    = C.SDL_PIXELFORMAT_RGBA4444
-	PIXELFORMAT_ABGR4444    = C.SDL_PIXELFORMAT_ABGR4444
-	PIXELFORMAT_BGRA4444    = C.SDL_PIXELFORMAT_BGRA4444
-	PIXELFORMAT_ARGB1555    = C.SDL_PIXELFORMAT_ARGB1555
-	PIXELFORMAT_RGBA5551    = C.SDL_PIXELFORMAT_RGBA5551
-	PIXELFORMAT_ABGR1555    = C.SDL_PIXELFORMAT_ABGR1555
-	PIXELFORMAT_BGRA5551    = C.SDL_PIXELFORMAT_BGRA5551
-	PIXELFORMAT_RGB565      = C.SDL_PIXELFORMAT_RGB565
-	PIXELFORMAT_BGR565      = C.SDL_PIXELFORMAT_BGR565
-	PIXELFORMAT_RGB24       = C.SDL_PIXELFORMAT_RGB24
-	PIXELFORMAT_BGR24       = C.SDL_PIXELFORMAT_BGR24
-	PIXELFORMAT_RGB888      = C.SDL_PIXELFORMAT_RGB888
-	PIXELFORMAT_RGBX8888    = C.SDL_PIXELFORMAT_RGBX8888
-	PIXELFORMAT_BGR888      = C.SDL_PIXELFORMAT_BGR888
-	PIXELFORMAT_BGRX8888    = C.SDL_PIXELFORMAT_BGRX8888
-	PIXELFORMAT_ARGB8888    = C.SDL_PIXELFORMAT_ARGB8888
-	PIXELFORMAT_RGBA8888    = C.SDL_PIXELFORMAT_RGBA8888
-	PIXELFORMAT_ABGR8888    = C.SDL_PIXELFORMAT_ABGR8888
-	PIXELFORMAT_BGRA8888    = C.SDL_PIXELFORMAT_BGRA8888
-	PIXELFORMAT_ARGB2101010 = C.SDL_PIXELFORMAT_ARGB2101010
-	PIXELFORMAT_YV12        = C.SDL_PIXELFORMAT_YV12
-	PIXELFORMAT_IYUV        = C.SDL_PIXELFORMAT_IYUV
-	PIXELFORMAT_YUY2        = C.SDL_PIXELFORMAT_YUY2
-	PIXELFORMAT_UYVY        = C.SDL_PIXELFORMAT_UYVY
-	PIXELFORMAT_YVYU        = C.SDL_PIXELFORMAT_YVYU
+	PIXELFORMAT_UNKNOWN     PixelFormatConstant = C.SDL_PIXELFORMAT_UNKNOWN
+	PIXELFORMAT_INDEX1LSB   PixelFormatConstant = C.SDL_PIXELFORMAT_INDEX1LSB
+	PIXELFORMAT_INDEX1MSB   PixelFormatConstant = C.SDL_PIXELFORMAT_INDEX1MSB
+	PIXELFORMAT_INDEX4LSB   PixelFormatConstant = C.SDL_PIXELFORMAT_INDEX4LSB
+	PIXELFORMAT_INDEX4MSB   PixelFormatConstant = C.SDL_PIXELFORMAT_INDEX4MSB
+	PIXELFORMAT_INDEX8      PixelFormatConstant = C.SDL_PIXELFORMAT_INDEX8
+	PIXELFORMAT_RGB332      PixelFormatConstant = C.SDL_PIXELFORMAT_RGB332
+	PIXELFORMAT_RGB444      PixelFormatConstant = C.SDL_PIXELFORMAT_RGB444
+	PIXELFORMAT_RGB555      PixelFormatConstant = C.SDL_PIXELFORMAT_RGB555
+	PIXELFORMAT_BGR555      PixelFormatConstant = C.SDL_PIXELFORMAT_BGR555
+	PIXELFORMAT_ARGB4444    PixelFormatConstant = C.SDL_PIXELFORMAT_ARGB4444
+	PIXELFORMAT_RGBA4444    PixelFormatConstant = C.SDL_PIXELFORMAT_RGBA4444
+	PIXELFORMAT_ABGR4444    PixelFormatConstant = C.SDL_PIXELFORMAT_ABGR4444
+	PIXELFORMAT_BGRA4444    PixelFormatConstant = C.SDL_PIXELFORMAT_BGRA4444
+	PIXELFORMAT_XRGB4444    PixelFormatConstant = C.SDL_PIXELFORMAT_XRGB4444
+	PIXELFORMAT_XBGR4444    PixelFormatConstant = C.SDL_PIXELFORMAT_XBGR4444
+	PIXELFORMAT_ARGB1555    PixelFormatConstant = C.SDL_PIXELFORMAT_ARGB1555
+	PIXELFORMAT_XRGB1555    PixelFormatConstant = C.SDL_PIXELFORMAT_XRGB1555
+	PIXELFORMAT_XBGR1555    PixelFormatConstant = C.SDL_PIXELFORMAT_XBGR1555
+	PIXELFORMAT_RGBA5551    PixelFormatConstant = C.SDL_PIXELFORMAT_RGBA5551
+	PIXELFORMAT_ABGR1555    PixelFormatConstant = C.SDL_PIXELFORMAT_ABGR1555
+	PIXELFORMAT_BGRA5551    PixelFormatConstant = C.SDL_PIXELFORMAT_BGRA5551
+	PIXELFORMAT_RGB565      PixelFormatConstant = C.SDL_PIXELFORMAT_RGB565
+	PIXELFORMAT_BGR565      PixelFormatConstant = C.SDL_PIXELFORMAT_BGR565
+	PIXELFORMAT_RGB24       PixelFormatConstant = C.SDL_PIXELFORMAT_RGB24
+	PIXELFORMAT_BGR24       PixelFormatConstant = C.SDL_PIXELFORMAT_BGR24
+	PIXELFORMAT_XRGB8888    PixelFormatConstant = C.SDL_PIXELFORMAT_XRGB8888
+	PIXELFORMAT_XBGR8888    PixelFormatConstant = C.SDL_PIXELFORMAT_XBGR8888
+	PIXELFORMAT_RGB888      PixelFormatConstant = C.SDL_PIXELFORMAT_RGB888
+	PIXELFORMAT_RGBX8888    PixelFormatConstant = C.SDL_PIXELFORMAT_RGBX8888
+	PIXELFORMAT_BGR888      PixelFormatConstant = C.SDL_PIXELFORMAT_BGR888
+	PIXELFORMAT_BGRX8888    PixelFormatConstant = C.SDL_PIXELFORMAT_BGRX8888
+	PIXELFORMAT_ARGB8888    PixelFormatConstant = C.SDL_PIXELFORMAT_ARGB8888
+	PIXELFORMAT_RGBA8888    PixelFormatConstant = C.SDL_PIXELFORMAT_RGBA8888
+	PIXELFORMAT_ABGR8888    PixelFormatConstant = C.SDL_PIXELFORMAT_ABGR8888
+	PIXELFORMAT_BGRA8888    PixelFormatConstant = C.SDL_PIXELFORMAT_BGRA8888
+	PIXELFORMAT_ARGB2101010 PixelFormatConstant = C.SDL_PIXELFORMAT_ARGB2101010
+	PIXELFORMAT_YV12        PixelFormatConstant = C.SDL_PIXELFORMAT_YV12
+	PIXELFORMAT_IYUV        PixelFormatConstant = C.SDL_PIXELFORMAT_IYUV
+	PIXELFORMAT_YUY2        PixelFormatConstant = C.SDL_PIXELFORMAT_YUY2
+	PIXELFORMAT_UYVY        PixelFormatConstant = C.SDL_PIXELFORMAT_UYVY
+	PIXELFORMAT_YVYU        PixelFormatConstant = C.SDL_PIXELFORMAT_YVYU
 )
 
 // Pixel format variables.
 var (
-	PIXELFORMAT_RGBA32 = C.SDL_PIXELFORMAT_RGBA32
-	PIXELFORMAT_ARGB32 = C.SDL_PIXELFORMAT_ARGB32
-	PIXELFORMAT_BGRA32 = C.SDL_PIXELFORMAT_BGRA32
-	PIXELFORMAT_ABGR32 = C.SDL_PIXELFORMAT_ABGR32
+	PIXELFORMAT_RGBA32 PixelFormatConstant = C.SDL_PIXELFORMAT_RGBA32
+	PIXELFORMAT_ARGB32 PixelFormatConstant = C.SDL_PIXELFORMAT_ARGB32
+	PIXELFORMAT_BGRA32 PixelFormatConstant = C.SDL_PIXELFORMAT_BGRA32
+	PIXELFORMAT_ABGR32 PixelFormatConstant = C.SDL_PIXELFORMAT_ABGR32
 )
 
 // These define alpha as the opacity of a surface.
@@ -236,7 +258,7 @@ func MasksToPixelFormatEnum(bpp int, rmask, gmask, bmask, amask uint32) uint {
 
 // AllocFormat creates a PixelFormat structure corresponding to a pixel format.
 // (https://wiki.libsdl.org/SDL_AllocFormat)
-func AllocFormat(format uint) (*PixelFormat, error) {
+func AllocFormat(format PixelFormatConstant) (*PixelFormat, error) {
 	r := (*PixelFormat)(unsafe.Pointer(C.SDL_AllocFormat(C.Uint32(format))))
 	if r == nil {
 		return nil, GetError()
@@ -360,6 +382,8 @@ var (
 	RGB555Model   color.Model = color.ModelFunc(rgb555Model)
 	BGR565Model   color.Model = color.ModelFunc(bgr565Model)
 	BGR555Model   color.Model = color.ModelFunc(bgr555Model)
+	RGB888Model   color.Model = color.ModelFunc(rgb888Model)
+	BGR888Model   color.Model = color.ModelFunc(bgr888Model)
 	ARGB4444Model color.Model = color.ModelFunc(argb4444Model)
 	ABGR4444Model color.Model = color.ModelFunc(abgr4444Model)
 	RGBA4444Model color.Model = color.ModelFunc(rgba4444Model)
@@ -370,6 +394,8 @@ var (
 	BGRA5551Model color.Model = color.ModelFunc(bgra5551Model)
 	RGBA8888Model color.Model = color.ModelFunc(rgba8888Model)
 	BGRA8888Model color.Model = color.ModelFunc(bgra8888Model)
+	ARGB8888Model color.Model = color.ModelFunc(argb8888Model)
+	ABGR8888Model color.Model = color.ModelFunc(abgr8888Model)
 )
 
 func rgb444Model(c color.Color) color.Color {
@@ -473,6 +499,46 @@ func bgr555Model(c color.Color) color.Color {
 	}
 	r, g, b, _ := c.RGBA()
 	return BGR555{uint8(b >> 11), uint8(g >> 11), uint8(r >> 11)}
+}
+
+type RGB888 struct {
+	R, G, B byte
+}
+
+func (c RGB888) RGBA() (r, g, b, a uint32) {
+	r = uint32(c.R)
+	g = uint32(c.G)
+	b = uint32(c.B)
+	a = 255
+	return
+}
+
+func rgb888Model(c color.Color) color.Color {
+	if _, ok := c.(color.RGBA); ok {
+		return c
+	}
+	r, g, b, _ := c.RGBA()
+	return RGB888{uint8(r), uint8(g), uint8(b)}
+}
+
+type BGR888 struct {
+	B, G, R byte
+}
+
+func (c BGR888) RGBA() (r, g, b, a uint32) {
+	b = uint32(c.B)
+	g = uint32(c.G)
+	r = uint32(c.R)
+	a = 255
+	return
+}
+
+func bgr888Model(c color.Color) color.Color {
+	if _, ok := c.(color.RGBA); ok {
+		return c
+	}
+	r, g, b, _ := c.RGBA()
+	return BGR888{uint8(b), uint8(g), uint8(r)}
 }
 
 type ARGB4444 struct {
@@ -705,4 +771,44 @@ func bgra8888Model(c color.Color) color.Color {
 	}
 	r, g, b, a := c.RGBA()
 	return BGRA8888{uint8(b), uint8(g), uint8(r), uint8(a)}
+}
+
+type ARGB8888 struct {
+	A, R, G, B byte
+}
+
+func (c ARGB8888) RGBA() (r, g, b, a uint32) {
+	a = uint32(c.A)
+	r = uint32(c.R)
+	g = uint32(c.G)
+	b = uint32(c.B)
+	return
+}
+
+func argb8888Model(c color.Color) color.Color {
+	if _, ok := c.(color.RGBA); ok {
+		return c
+	}
+	r, g, b, a := c.RGBA()
+	return ARGB8888{uint8(a), uint8(r), uint8(g), uint8(b)}
+}
+
+type ABGR8888 struct {
+	A, B, G, R byte
+}
+
+func (c ABGR8888) RGBA() (r, g, b, a uint32) {
+	a = uint32(c.A)
+	r = uint32(c.R)
+	g = uint32(c.G)
+	b = uint32(c.B)
+	return
+}
+
+func abgr8888Model(c color.Color) color.Color {
+	if _, ok := c.(color.RGBA); ok {
+		return c
+	}
+	r, g, b, a := c.RGBA()
+	return ABGR8888{uint8(a), uint8(b), uint8(g), uint8(r)}
 }

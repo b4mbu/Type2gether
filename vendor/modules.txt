@@ -1,4 +1,6 @@
-# github.com/veandco/go-sdl2 v0.4.29
+# github.com/veandco/go-sdl2 v0.5.0-alpha.4.0.20230209044354-a8580f5a99af
 ## explicit; go 1.15
+github.com/veandco/go-sdl2/.go-sdl2-libs
+github.com/veandco/go-sdl2/.go-sdl2-libs/include/SDL2
 github.com/veandco/go-sdl2/sdl
 github.com/veandco/go-sdl2/ttf
