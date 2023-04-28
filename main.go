@@ -259,7 +259,7 @@ func configRendererScale(renderer *sdl.Renderer, windowWidth, windowHeight int32
 		return err
 	}
 
-	println(rw, rh)
+	//println(rw, rh)
 
 	if rw != windowWidth {
 		var (
@@ -303,12 +303,25 @@ func (e *Engine) SetFont(filename string, sizePx int32, spaceBetween int32, colo
 	}
 	sizePt := int(float32(sizePx) * scaleFactor)
 
-	println(scaleFactor, sizePt)
-	ttfFont, err := ttf.OpenFont(filename, sizePt)
+	//println(scaleFactor, sizePt)
+    var ttfFont *ttf.Font
+	ttfFont, err = ttf.OpenFont(filename, sizePt)
 
-	if err != nil {
-		return err
-	}
+    if err != nil {
+        // open default font from memory
+        RWops, err := sdl.RWFromMem(FontBytes)
+
+        if err != nil {
+            return err
+        }
+
+        ttfFont, err = ttf.OpenFontRW(RWops, 1, sizePt)
+
+        if err != nil {
+            return err
+        }
+    }
+
 
 	if e.font.ttfFont != nil {
 		e.font.ttfFont.Close()
@@ -327,13 +340,29 @@ func (e *Engine) SetFont(filename string, sizePx int32, spaceBetween int32, colo
 }
 
 func getScaleFactor(fontFilename string) (float32, error) {
-	tmpSize := 100
-	ttfFont, err := ttf.OpenFont(fontFilename, tmpSize)
-	defer ttfFont.Close()
+    var (
+        ttfFont   *ttf.Font
+        RWops     *sdl.RWops
+        err       error
+        tmpSize = 100
+    )
+	ttfFont, err = ttf.OpenFont(fontFilename, tmpSize)
+    if err != nil {
+        // open default font from memory
+        RWops, err = sdl.RWFromMem(FontBytes)
 
-	if err != nil {
-		return 1, err
-	}
+        if err != nil {
+            return 1, err
+        }
+
+        ttfFont, err = ttf.OpenFontRW(RWops, 1, tmpSize)
+
+        if err != nil {
+            return 1, err
+        }
+    }
+
+	defer ttfFont.Close()
 
 	var maxH int32 = 0
 
@@ -346,7 +375,7 @@ func getScaleFactor(fontFilename string) (float32, error) {
 			maxH = surface.H
 		}
 	}
-	println("maxH:", maxH)
+	//println("maxH:", maxH)
 	return float32(tmpSize) / float32(maxH), nil
 }
 
@@ -389,7 +418,7 @@ func (e *Engine) SetCache(supportedChars string) error {
 		rows    = h / height
 		columns = w / (width + e.font.GetSpaceBetween())
 	)
-	println("h:", h, "mx:", mx, "height:", height)
+	//println("h:", h, "mx:", mx, "height:", height)
 	cache.RectangleMatrix = NewRectangleMatrix(rows, columns, e.font.GetSize(), e.font.GetSpaceBetween())
 	e.cache = cache
 
@@ -401,7 +430,7 @@ func (e *Engine) LoadTextFromFile(cursorId int64) error {
 	if err != nil {
 		return err
 	}
-	println(str)
+	//println(str)
 	err = e.text.Paste(str, cursorId)
 	if err != nil {
 		return err
@@ -411,7 +440,7 @@ func (e *Engine) LoadTextFromFile(cursorId int64) error {
 }
 
 func (e *Engine) SaveTextToFile() error {
-	println(e.text.GetString())
+	//println(e.text.GetString())
 	return filemanager.SaveToFile(e.filename, e.text.GetString())
 }
 
@@ -421,7 +450,7 @@ func (e *Engine) Loop() {
 	DEBUG_CUR_ID := int64(0)
 	err := e.LoadTextFromFile(DEBUG_CUR_ID)
 	if err != nil {
-		println(err)
+		//println(err)
 	}
 	e.renderText(DEBUG_CUR_ID)
 	for running {
@@ -517,7 +546,7 @@ func (e *Engine) InsertChar(value rune, cursorId int64) {
 	if value == '\n' {
 		err := e.text.InsertLineAfter(cursorId)
 		if err != nil {
-			//println(err)
+			println(err)
 		}
 	} else if value == '\t' {
 		for i := 0; i < 4; i++ {
@@ -528,7 +557,7 @@ func (e *Engine) InsertChar(value rune, cursorId int64) {
 		//if cur.LineIter.GetValue().Length()+1 < e.cache.RectangleMatrix.Columns {
 		err := e.text.InsertCharAfter(cursorId, value)
 		if err != nil {
-			//println(err)
+			println(err)
 		}
 		//}
 	}

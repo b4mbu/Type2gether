@@ -182,11 +182,11 @@ func (t *Text) InsertCharAfter(cursorId int64, value rune) error {
 func (t *Text) Paste(data string, cursorId int64) error {
     //cur := t.Cursors[cursorId]
     var err error
-    println("data: ", data)
+    //println("data: ", data)
     // TODO замена на before и перевернуть цикл
     for _, e := range data {
         if e == '\n' {
-            println("\\n")
+            //println("\\n")
             err = t.InsertLineAfter(cursorId)
         } else {
             err = t.InsertCharAfter(cursorId, e)
@@ -578,3 +578,4 @@ func (cur *Cursor) MoveEnd() {
     cur.CharIter = cur.LineIter.GetValue().GetTail()
     cur.Col = cur.LineIter.GetValue().Length() - 1
 }
+
