@@ -304,24 +304,23 @@ func (e *Engine) SetFont(filename string, sizePx int32, spaceBetween int32, colo
 	sizePt := int(float32(sizePx) * scaleFactor)
 
 	//println(scaleFactor, sizePt)
-    var ttfFont *ttf.Font
+	var ttfFont *ttf.Font
 	ttfFont, err = ttf.OpenFont(filename, sizePt)
 
-    if err != nil {
-        // open default font from memory
-        RWops, err := sdl.RWFromMem(FontBytes)
+	if err != nil {
+		// open default font from memory
+		RWops, err := sdl.RWFromMem(FontBytes)
 
-        if err != nil {
-            return err
-        }
+		if err != nil {
+			return err
+		}
 
-        ttfFont, err = ttf.OpenFontRW(RWops, 1, sizePt)
+		ttfFont, err = ttf.OpenFontRW(RWops, 1, sizePt)
 
-        if err != nil {
-            return err
-        }
-    }
-
+		if err != nil {
+			return err
+		}
+	}
 
 	if e.font.ttfFont != nil {
 		e.font.ttfFont.Close()
@@ -340,34 +339,34 @@ func (e *Engine) SetFont(filename string, sizePx int32, spaceBetween int32, colo
 }
 
 func getScaleFactor(fontFilename string) (float32, error) {
-    var (
-        ttfFont   *ttf.Font
-        RWops     *sdl.RWops
-        err       error
-        tmpSize = 100
-    )
+	var (
+		ttfFont *ttf.Font
+		RWops   *sdl.RWops
+		err     error
+		tmpSize = 100
+	)
 	ttfFont, err = ttf.OpenFont(fontFilename, tmpSize)
-    if err != nil {
-        // open default font from memory
-        RWops, err = sdl.RWFromMem(FontBytes)
+	if err != nil {
+		// open default font from memory
+		RWops, err = sdl.RWFromMem(FontBytes)
 
-        if err != nil {
-            return 1, err
-        }
+		if err != nil {
+			return 1, err
+		}
 
-        ttfFont, err = ttf.OpenFontRW(RWops, 1, tmpSize)
+		ttfFont, err = ttf.OpenFontRW(RWops, 1, tmpSize)
 
-        if err != nil {
-            return 1, err
-        }
-    }
+		if err != nil {
+			return 1, err
+		}
+	}
 
 	defer ttfFont.Close()
 
 	var maxH int32 = 0
 
 	for _, c := range AllSupportedChars {
-        surface, err := ttfFont.RenderGlyphBlended(c, sdl.Color{R: 0, G: 0, B: 0, A: 0})
+		surface, err := ttfFont.RenderGlyphBlended(c, sdl.Color{R: 0, G: 0, B: 0, A: 0})
 		if err != nil {
 			return 1, err
 		}
