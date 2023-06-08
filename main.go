@@ -49,7 +49,9 @@ func GUIStop() {
 }
 
 type Cache struct {
-	PreRenderredCharTextures map[rune]CharTexture
+	PreRenderredCharTextures map[rune]map[uint32]CharTexture
+
+    // TODO replace that
 	PreRenderredNumsTextures map[rune]CharTexture
 	RectangleMatrix          *RectangleMatrix
 }
@@ -285,11 +287,17 @@ func (e *Engine) Stop() {
 	}
 
 	if e.cache != nil {
-		for _, texture := range e.cache.PreRenderredCharTextures {
-			if texture.Texture == nil {
+		for _, mapColor := range e.cache.PreRenderredCharTextures {
+			if mapColor == nil {
 				continue
 			}
-			texture.Texture.Destroy()
+            for _, texture := range mapColor {
+                if texture.Texture == nil {
+                    continue
+                }
+
+                texture.Texture.Destroy()
+            }
 		}
 	}
 	// TODO think about dele all text ???
@@ -384,7 +392,10 @@ func (e *Engine) SetCache(supportedChars string) error {
 	}
 
 	cache := &Cache{}
-	cache.PreRenderredCharTextures = make(map[rune]CharTexture)
+	cache.PreRenderredCharTextures = make(map[rune]map[uint32]CharTexture)
+    for _, char := range supportedChars {
+        cache.PreRenderredCharTextures[char] = make(map[uint32]CharTexture)
+    }
 	cache.PreRenderredNumsTextures = make(map[rune]CharTexture)
 
 	var (
@@ -394,15 +405,17 @@ func (e *Engine) SetCache(supportedChars string) error {
 	)
 
 	for _, char := range supportedChars {
-		fontSurface, _ := e.font.ttfFont.RenderGlyphBlended(char, e.font.GetColor())
-		texture, _ := e.renderer.CreateTextureFromSurface(fontSurface)
-		cache.PreRenderredCharTextures[char] = CharTexture{texture, fontSurface.W}
-		if fontSurface.W < width {
-			width = fontSurface.W
-		}
-		if fontSurface.H > mx {
-			mx = fontSurface.H
-		}
+        for _, color := range textmanager.COLORS {
+            fontSurface, _ := e.font.ttfFont.RenderGlyphBlended(char, hexToSdlColor(color))
+            texture, _ := e.renderer.CreateTextureFromSurface(fontSurface)
+            cache.PreRenderredCharTextures[char][color] = CharTexture{texture, fontSurface.W}
+            if fontSurface.W < width {
+                width = fontSurface.W
+            }
+            if fontSurface.H > mx {
+                mx = fontSurface.H
+            }
+        }
 	}
 
 	// cache all digits for rendering Numbers of Rows
@@ -561,12 +574,39 @@ func (e *Engine) InsertChar(value rune, cursorId int64) {
 		//}
 	}
 }
+// костыль начинается тут...
+func FindTokensInString(s string) []uint32 {
+    result := []uint32{}
+    curStr := ""
+	for ind, char := range s {
+        result = append(result, textmanager.FNTCLR)
+        if char == ' ' || char == '\n' {
+			if color, ok := textmanager.TokensColor[curStr]; ok {
+                // start coloring
+                for i:= ind - len(curStr); i < ind; i+=1 {
+                    result[i] = color
+                }
+			}
+            curStr = ""
+        } else {
+            curStr += string(char)
+        }
+    }
+    if color, ok := textmanager.TokensColor[curStr]; ok {
+        for i:= len(s) - len(curStr); i < len(s); i+=1 {
+            result[i] = color
+        }
+    }
+    //print(len(s) == len(result))
+    return result
+}
+
 
 func (e *Engine) renderText(cursorId int64) {
 	e.renderer.Clear()
 	var (
 		// e.font.GetSpaceBetween равен 0, поэтому он сейчас ни на что не влияет || тут +7 px это просто отступ от первой цифры
-		paddingLeft int32 = (e.font.GetSpaceBetween()+e.cache.PreRenderredCharTextures[rune('1')].Width)*4 + 7
+		paddingLeft int32 = (e.font.GetSpaceBetween()+e.cache.PreRenderredCharTextures[rune('1')][textmanager.FNTCLR].Width)*4 + 7
 		X           int32 = paddingLeft
 		Y           int32 = 0
 		row         int32 = 0
@@ -595,7 +635,13 @@ func (e *Engine) renderText(cursorId int64) {
 		delta = 0
 	}
 
-	for _, c := range e.text.GetScreenString(0) {
+    // for tokens
+    var currentColor uint32 = textmanager.FNTCLR
+
+    tokens := FindTokensInString(e.text.GetScreenString(0))
+
+	for ind, c := range e.text.GetScreenString(0) {
+        currentColor = tokens[ind]
 		if col-4 < delta {
 			if c == '\n' {
 				Y += e.font.GetSize()
@@ -620,11 +666,11 @@ func (e *Engine) renderText(cursorId int64) {
 		}
 		//println("col - del: ", col - delta, "c:", rune(c))
 		e.GetRectFromMatrix(row, col-delta).H = e.font.GetSize()
-		e.GetRectFromMatrix(row, col-delta).W = e.cache.PreRenderredCharTextures[rune(c)].Width
+		e.GetRectFromMatrix(row, col-delta).W = e.cache.PreRenderredCharTextures[rune(c)][currentColor].Width
 		e.GetRectFromMatrix(row, col-delta).X = X
 		e.GetRectFromMatrix(row, col-delta).Y = Y
-		e.renderer.Copy(e.cache.PreRenderredCharTextures[rune(c)].Texture, nil, e.GetRectFromMatrix(row, col-delta))
-		X += e.cache.PreRenderredCharTextures[rune(c)].Width + e.font.GetSpaceBetween()
+		e.renderer.Copy(e.cache.PreRenderredCharTextures[rune(c)][currentColor].Texture, nil, e.GetRectFromMatrix(row, col-delta))
+		X += e.cache.PreRenderredCharTextures[rune(c)][currentColor].Width + e.font.GetSpaceBetween()
 		col++
 		if c == '\n' {
 			Y += e.font.GetSize()
@@ -726,8 +772,8 @@ func main() {
 		FontSize                   int32  = 30 // in px!
 		SpaceBetween               int32  = 0
 		FontFilename               string = "MonoNL-Regular.ttf"
-		FontColor                  uint32 = 0xFFFFFFFF
-		LineNumbersColor           uint32 = 0xbd93f9FF
+		FontColor                  uint32 = textmanager.FNTCLR
+		LineNumbersColor           uint32 = textmanager.LNNMBC
 		LineNumbersBackgroundColor uint32 = 0x44475aFF
 		TextBackgroundColor        uint32 = 0x282a36FF
 		CursorColor                uint32 = 0xDAD2D8FF

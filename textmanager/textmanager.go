@@ -7,15 +7,28 @@ import (
 
 const (
 	endl = '\n'
+    PURPLE  = 0xDC42DDFF
+    RED     = 0x51D718FF
+    RED2    = 0xFF8300FF
+    BLUE    = 0x8A6CD5FF
+    CIAN    = 0xF5A58DFF
+    PINK    = 0x0893FCFF
+    FNTCLR  = 0xFFFFFFFF
+    LNNMBC  = 0xbd93f9FF
 )
+
+var COLORS = []uint32{PURPLE, RED, BLUE, CIAN, PINK, FNTCLR, LNNMBC, RED2}
 
 var (
 	TokensColor = map[string]uint32{
-		"for":   0xDC42DDFF,
-		"while": 0x51D718FF,
-		"if":    0x8A6CD5FF,
-		"int":   0xF5A58DFF,
-		"aboba": 0x0893FCFF,
+		"for": PURPLE,
+		"while": RED,
+		"if": BLUE,
+		"else": BLUE,
+		"return": RED2,
+		"int": CIAN,
+		"long": CIAN,
+		"aboba": PINK,
 	}
 	MaxTokenLength int
 )
@@ -227,11 +240,16 @@ func (t *Text) DetectToken(cursorId int64) error {
 	for ptr != right.GetNext() {
 		if ptr.GetValue().Value == ' ' {
 			if color, ok := TokensColor[curToken]; ok {
+                // start coloring
 				val := left.GetValue()
 				val.Color = color
 				left.SetValue(val)
 				left = ptr.GetNext()
-				println("token found: ", curToken)
+                // end coloring
+				val = ptr.GetValue()
+				val.Color = FNTCLR
+                ptr.SetValue(val)
+				//println("token found: ", curToken)
 				curToken = ""
 			}
 		} else {
@@ -243,7 +261,7 @@ func (t *Text) DetectToken(cursorId int64) error {
 		val := left.GetValue()
 		val.Color = color
 		left.SetValue(val)
-		println("token found: ", curToken)
+		//println("token found: ", curToken)
 	}
 
 	return nil
