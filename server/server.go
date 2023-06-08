@@ -24,9 +24,40 @@ const logo string = `     __    __ __            __
  /_.___/  /_/ /_/ /_/ /_/_.___/\__,_/   `
 
 type Message struct {
-	AuthorUsername string
-	Id             int64
-	Message        string `json:"message"`
+	Username  string `josn:"username"`
+	Type      string `json:"type"`
+	Char      string `json:"char"`
+	Direction string `json:"direction"`
+}
+
+func NewConnectMessage(username string) *Message {
+	return &Message{
+		Username: username,
+		Type:     "connect",
+	}
+}
+
+func NewInsertMessage(username string, char string) *Message {
+	return &Message{
+		Username: username,
+		Type:     "insert",
+		Char:     char,
+	}
+}
+
+func NewRemoveMessage(username string) *Message {
+	return &Message{
+		Username: username,
+		Type:     "remove",
+	}
+}
+
+func NewMoveMessage(username string, direction string) *Message {
+	return &Message{
+		Username:  username,
+		Type:      "move",
+		Direction: direction,
+	}
 }
 
 type Client struct {
@@ -60,8 +91,8 @@ func NewServer(password, filename string) *Server {
 	server := &Server{
 		password: password,
 		upgrader: websocket.Upgrader{
-			ReadBufferSize:  1024,
-			WriteBufferSize: 1024,
+			ReadBufferSize:  512,
+			WriteBufferSize: 512,
 		},
 		clients:  make(map[string]*Client),
 		messages: make(chan *Message),
@@ -144,9 +175,18 @@ func (s *Server) wsEndpoint(w http.ResponseWriter, r *http.Request) {
 
 	s.logger.Success(fmt.Sprintf("User %s: connected", username))
 
-	go s.writeMessageToClientsExceptAuthor(&Message{Message: ":connected", AuthorUsername: username}, username)
+	s.AddClientsToNewClient(client)
 
+	go s.writeMessageToClientsExceptAuthor(NewConnectMessage(username))
 	go s.RunReader(client)
+}
+
+func (s *Server) AddClientsToNewClient(newClient *Client) {
+	for username, client := range s.clients {
+		if client.Username != newClient.Username {
+			newClient.Conn.WriteJSON(NewConnectMessage(username))
+		}
+	}
 }
 
 func (s *Server) ConsistsClient(username string) bool {
@@ -175,22 +215,40 @@ func (s *Server) RunReader(client *Client) {
 
 		var message Message
 		json.Unmarshal(p, &message)
-		message.AuthorUsername = client.Username
-		message.Id = client.Id
+		fmt.Println("ff", message)
+		message.Username = client.Username
 		go s.HandleMessage(&message)
 		s.messages <- &message
 	}
 }
 
 func (s *Server) HandleMessage(message *Message) {
-	s.text.InsertCharAfter(message.Id, rune(message.Message[0]))
+	// go s.writeMessageToClientsExceptAuthor(message)
+	clientId := s.clients[message.Username].Id
+	switch message.Type {
+	case "insert":
+		s.text.InsertCharAfter(clientId, rune(message.Char[0]))
+	case "remove":
+		s.text.RemoveCharBefore(clientId)
+	case "move":
+		switch message.Direction {
+		case "up":
+			s.text.Cursors[clientId].MoveUp()
+		case "down":
+			s.text.Cursors[clientId].MoveDown()
+		case "left":
+			s.text.Cursors[clientId].MoveLeft()
+		case "right":
+			s.text.Cursors[clientId].MoveRight()
+		}
+	}
 }
 
 func (s *Server) RunWriter() {
 	for {
 		select {
 		case message := <-s.messages:
-			s.writeMessageToAllClients(message)
+			s.writeMessageToClientsExceptAuthor(message)
 		}
 	}
 }
@@ -199,17 +257,19 @@ func (s *Server) writeMessageToAllClients(message *Message) {
 	s.clientsMutex.Lock()
 	defer s.clientsMutex.Unlock()
 
+	fmt.Println(message)
+
 	for _, client := range s.clients {
 		client.Conn.WriteJSON(message)
 	}
 }
 
-func (s *Server) writeMessageToClientsExceptAuthor(message *Message, authorUsername string) {
+func (s *Server) writeMessageToClientsExceptAuthor(message *Message) {
 	s.clientsMutex.Lock()
 	defer s.clientsMutex.Unlock()
 
 	for username, client := range s.clients {
-		if username != authorUsername {
+		if username != message.Username {
 			client.Conn.WriteJSON(message)
 		}
 	}

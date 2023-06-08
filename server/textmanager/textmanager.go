@@ -3,8 +3,8 @@ package textmanager
 // 																																        сделать красиво =)
 
 import (
-	"server/list"
 	"errors"
+	"server/list"
 )
 
 type Cursor struct {
@@ -42,11 +42,11 @@ func (cur *Cursor) MoveLeft() {
 			return
 		}
 
-        cur.SetPosition(cur.LineIter.GetPrev(), cur.LineIter.GetPrev().GetValue().GetTail(), cur.Row-1, cur.LineIter.GetPrev().GetValue().Length()-1) 
+		cur.SetPosition(cur.LineIter.GetPrev(), cur.LineIter.GetPrev().GetValue().GetTail(), cur.Row-1, cur.LineIter.GetPrev().GetValue().Length()-1)
 		return
 	}
-    
-    cur.SetPosition(cur.LineIter, cur.CharIter.GetPrev(), cur.Row, cur.Col-1)
+
+	cur.SetPosition(cur.LineIter, cur.CharIter.GetPrev(), cur.Row, cur.Col-1)
 }
 
 func (cur *Cursor) MoveRight() {
@@ -56,10 +56,10 @@ func (cur *Cursor) MoveRight() {
 				return
 			}
 
-            cur.SetPosition(cur.LineIter.GetNext(), nil, cur.Row+1, -1)
+			cur.SetPosition(cur.LineIter.GetNext(), nil, cur.Row+1, -1)
 			return
 		}
-        cur.SetPosition(cur.LineIter, cur.LineIter.GetValue().GetHead(), cur.Row, 0)
+		cur.SetPosition(cur.LineIter, cur.LineIter.GetValue().GetHead(), cur.Row, 0)
 		return
 	}
 
@@ -68,10 +68,10 @@ func (cur *Cursor) MoveRight() {
 			return
 		}
 
-        cur.SetPosition(cur.LineIter.GetNext(), nil, cur.Row+1, -1)
+		cur.SetPosition(cur.LineIter.GetNext(), nil, cur.Row+1, -1)
 		return
 	}
-    cur.SetPosition(cur.LineIter, cur.CharIter.GetNext(), cur.Row, cur.Col+1)
+	cur.SetPosition(cur.LineIter, cur.CharIter.GetNext(), cur.Row, cur.Col+1)
 }
 
 func (cur *Cursor) MoveUp() {
@@ -99,11 +99,11 @@ func (cur *Cursor) MoveDown() {
 }
 
 func (cur *Cursor) MoveHome() {
-    cur.SetPosition(cur.LineIter, nil, cur.Row, -1)
+	cur.SetPosition(cur.LineIter, nil, cur.Row, -1)
 }
 
 func (cur *Cursor) MoveEnd() {
-    cur.SetPosition(cur.LineIter, cur.LineIter.GetValue().GetTail(), cur.Row, cur.LineIter.GetValue().Length()-1)
+	cur.SetPosition(cur.LineIter, cur.LineIter.GetValue().GetTail(), cur.Row, cur.LineIter.GetValue().Length()-1)
 }
 
 type Text struct {
@@ -148,13 +148,13 @@ func (t *Text) InsertCharBefore(cursorId int64, value rune) error {
 func (t *Text) InsertCharAfter(cursorId int64, value rune) error {
 	cur := t.Cursors[cursorId]
 
-    if value == '\n' {
-        return t.InsertLineAfter(cursorId)
-    } else if value == '\t' {
-        for i := 0; i < 4; i++ {
-            t.InsertCharAfter(cursorId, ' ')
-        }
-    }
+	if value == '\n' {
+		return t.InsertLineAfter(cursorId)
+	} else if value == '\t' {
+		for i := 0; i < 4; i++ {
+			t.InsertCharAfter(cursorId, ' ')
+		}
+	}
 
 	if cur.CharIter == nil {
 		err := cur.LineIter.GetValue().PushFront(value)
@@ -260,23 +260,23 @@ func (t *Text) RemoveCharBefore(cursorId int64) error {
 		if cur.LineIter.GetPrev() == nil {
 			return nil
 		}
-        return t.RemoveCharBeforeFromBeginning(cur)
+		return t.RemoveCharBeforeFromBeginning(cur)
 	}
-    return t.RemovwCharBeforeFromMiddle(cur)
+	return t.RemovwCharBeforeFromMiddle(cur)
 }
 
-func (t *Text) RemoveCharBeforeFromBeginning(cur *Cursor) error { 
+func (t *Text) RemoveCharBeforeFromBeginning(cur *Cursor) error {
 
-    prev := cur.LineIter.GetPrev()
-    oldTail := prev.GetValue().GetTail()
-    oldLen := prev.GetValue().Length()
-    err := t.MergeLines(cur.Id)
-    if err != nil {
-        return err
-    }
+	prev := cur.LineIter.GetPrev()
+	oldTail := prev.GetValue().GetTail()
+	oldLen := prev.GetValue().Length()
+	err := t.MergeLines(cur.Id)
+	if err != nil {
+		return err
+	}
 
-    cur.SetPosition(prev, oldTail, cur.Row-1, oldLen-1)
-    return nil
+	cur.SetPosition(prev, oldTail, cur.Row-1, oldLen-1)
+	return nil
 }
 
 func (t *Text) RemovwCharBeforeFromMiddle(cur *Cursor) error {
@@ -286,7 +286,7 @@ func (t *Text) RemovwCharBeforeFromMiddle(cur *Cursor) error {
 	if err != nil {
 		return err
 	}
-    cur.SetPosition(cur.LineIter, newCharIter, cur.Row, cur.Col-1)
+	cur.SetPosition(cur.LineIter, newCharIter, cur.Row, cur.Col-1)
 	return nil
 }
 
@@ -303,7 +303,7 @@ func (t *Text) RemoveCharAfter(cursorId int64) error {
 }
 
 func (t *Text) MergeLines(cursorId int64) error {
-    /* Be careful cursor does not move */
+	/* Be careful cursor does not move */
 	cur := t.Cursors[cursorId]
 	if cur.LineIter.GetPrev() == nil {
 		return errors.New("there is no previous line")
@@ -331,4 +331,3 @@ func (t *Text) GetFullText() string {
 	}
 	return str
 }
-

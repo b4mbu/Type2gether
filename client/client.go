@@ -15,8 +15,40 @@ import (
 var log = logger.NewLogger(os.Stdout)
 
 type Message struct {
-	AuthorUsername string `json:"AuthorUsername"`
-	Message        string `json:"message"`
+	Username  string `json:"username"`
+	Type      string `json:"type"`
+	Char      string `json:"char"`
+	Direction string `json:"direction"`
+}
+
+func NewConnectMessage(username string) *Message {
+	return &Message{
+		Username: username,
+		Type:     "connect",
+	}
+}
+
+func NewInsertMessage(username string, char string) *Message {
+	return &Message{
+		Username: username,
+		Type:     "insert",
+		Char:     char,
+	}
+}
+
+func NewRemoveMessage(username string) *Message {
+	return &Message{
+		Username: username,
+		Type:     "remove",
+	}
+}
+
+func NewMoveMessage(username string, direction string) *Message {
+	return &Message{
+		Username:  username,
+		Type:      "move",
+		Direction: direction,
+	}
 }
 
 type Client struct {
@@ -52,7 +84,7 @@ func NewClient(host, username, password string) (*Client, error) {
 	}, nil
 }
 
-func (client *Client) Start(min chan *Message, mout chan string) {
+func (client *Client) Start(min chan *Message, mout chan *Message) {
 	log.Success("Client started")
 	go client.startReader(min)
 	client.startWriter(mout)
@@ -60,21 +92,22 @@ func (client *Client) Start(min chan *Message, mout chan string) {
 	client.Conn.Close()
 }
 
-func (client *Client) startWriter(messages chan string) {
+func (client *Client) startWriter(messages chan *Message) {
 	for {
 		select {
-		case input := <-messages:
-			if input == ":exit" {
-				cm := websocket.FormatCloseMessage(websocket.CloseNormalClosure,
-					fmt.Sprintf("username %s: closed", client.Username))
+		case msg := <-messages:
+			fmt.Println("alala", msg)
+			// if input == ":exit" {
+			// 	cm := websocket.FormatCloseMessage(websocket.CloseNormalClosure,
+			// 		fmt.Sprintf("username %s: closed", client.Username))
 
-				if err := client.Conn.WriteMessage(websocket.CloseMessage, cm); err != nil {
-					log.Error(err.Error())
-				}
-				return
-			}
+			// 	if err := client.Conn.WriteMessage(websocket.CloseMessage, cm); err != nil {
+			// 		log.Error(err.Error())
+			// 	}
+			// 	return
+			// }
 
-			if err := client.Conn.WriteJSON(Message{AuthorUsername: client.Username, Message: input}); err != nil {
+			if err := client.Conn.WriteJSON(msg); err != nil {
 				log.Error(err.Error())
 				continue
 			}
@@ -92,8 +125,7 @@ func (client *Client) startReader(min chan *Message) {
 
 		var message Message
 		json.Unmarshal(p, &message)
-
-		fmt.Printf("[%s] %s\n", message.AuthorUsername, message.Message)
+		fmt.Println(message)
 
 		if messageType == websocket.CloseMessage {
 			// TODO: send to application

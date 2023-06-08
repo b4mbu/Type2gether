@@ -121,6 +121,8 @@ type Engine struct {
 	filename string
 	client   *Client
 
+	usernamesCursors map[string]*textmanager.Cursor
+
 	LineNumbersBackgroundColor uint32
 	LineNumbersColor           uint32
 	TextBackgroundColor        uint32
@@ -241,6 +243,7 @@ func NewEngine(windowWidth, windowHeight int32,
 		TextBackgroundColor:        textBackgroundColor,
 		CursorColor:                cursorColor,
 		client:                     client,
+		usernamesCursors:           make(map[string]*textmanager.Cursor),
 	}
 
 	err = engine.SetFont(fontFilename, fontSize, fontSpaceBetween, fontColor, lineNumbersColor)
@@ -267,6 +270,9 @@ func NewEngine(windowWidth, windowHeight int32,
 	// TODO для server сделать нормальное присвоение Tail и Head
 	cur.ScreenHead.LineIter = engine.text.GetHead()
 	cur.ScreenTail.LineIter = engine.text.GetTail()
+	println(client.Username)
+
+	engine.usernamesCursors[client.Username] = engine.text.Cursors[0]
 
 	// TODO add regular expr!!!
 	// engine.filename = os.Args[1]
@@ -453,7 +459,7 @@ func (e *Engine) Loop() {
 		running      = true
 		DEBUG_CUR_ID = int64(0)
 		min          = make(chan *Message)
-		mout         = make(chan string)
+		mout         = make(chan *Message)
 	)
 	// err := e.LoadTextFromFile(DEBUG_CUR_ID)
 	// if err != nil {
@@ -468,13 +474,13 @@ func (e *Engine) Loop() {
 			switch t := event.(type) {
 			case *sdl.QuitEvent:
 				//println("Quit")
-				mout <- ":exit"
+				// mout <- ":exit"
 				running = false
 				break
 			case *sdl.TextInputEvent:
 				pressedKey := t.GetText()
 				letter := rune(pressedKey[0])
-				mout <- string(letter)
+				mout <- NewInsertMessage(e.client.Username, string(letter))
 				e.InsertChar(letter, DEBUG_CUR_ID)
 				e.renderText(DEBUG_CUR_ID)
 				break
@@ -490,19 +496,22 @@ func (e *Engine) Loop() {
 
 				if key == sdl.SCANCODE_DELETE || key == sdl.SCANCODE_BACKSPACE {
 					e.EraseChar(key, DEBUG_CUR_ID)
+					mout <- NewRemoveMessage(e.client.Username)
 				}
 
 				if key == sdl.SCANCODE_LEFT || key == sdl.SCANCODE_RIGHT || key == sdl.SCANCODE_UP || key == sdl.SCANCODE_DOWN || key == sdl.SCANCODE_HOME || key == 95 || key == sdl.SCANCODE_END || key == 89 {
-					e.MoveCursor(key, DEBUG_CUR_ID)
+					e.MoveCursor(key, DEBUG_CUR_ID, mout)
 				}
 
 				switch t.Keysym.Scancode {
 				case sdl.SCANCODE_RETURN:
 					e.InsertChar('\n', DEBUG_CUR_ID)
+					mout <- NewInsertMessage(e.client.Username, "\n")
 
 				case sdl.SCANCODE_TAB:
 					// TODO 4 -> SPACE_IN_ONE_TAB
 					e.InsertChar('\t', DEBUG_CUR_ID)
+					mout <- NewInsertMessage(e.client.Username, "\t")
 				}
 				e.renderText(DEBUG_CUR_ID)
 				break
@@ -512,15 +521,16 @@ func (e *Engine) Loop() {
 		e.MessageQueueMutex.Lock()
 		needsRender := len(e.MessageQueue) > 0
 		for _, message := range e.MessageQueue {
-			if message.Message == ":connected" {
-				// TODO: you know
-				e.text.AddNewCursor(int64(len(e.text.Cursors)), e.cache.RectangleMatrix.Rows, e.cache.RectangleMatrix.Columns)
-				e.text.Cursors[1].Color = 0x00FF20FF
-			} else {
-				if message.AuthorUsername != e.client.Username {
-					e.InsertChar(rune(message.Message[0]), 1)
-				}
-			}
+			e.HandleMessage(message)
+			// if message.Message == ":connected" {
+			// 	// TODO: you know
+			// 	e.text.AddNewCursor(int64(len(e.text.Cursors)), e.cache.RectangleMatrix.Rows, e.cache.RectangleMatrix.Columns)
+			// 	e.text.Cursors[1].Color = 0x00FF20FF
+			// } else {
+			// 	if message.Username != e.client.Username {
+			// 		e.InsertChar(rune(message.Message[0]), 1)
+			// 	}
+			// }
 		}
 		e.MessageQueue = e.MessageQueue[:0]
 		e.MessageQueueMutex.Unlock()
@@ -537,17 +547,50 @@ func (e *Engine) Loop() {
 	// }
 }
 
-func (e *Engine) MoveCursor(direction sdl.Scancode, cursorId int64) {
+func (e *Engine) HandleMessage(message *Message) {
+	println("fff", message.Username)
+	if message.Type == "connect" {
+		println("added!!")
+		e.text.AddNewCursor(int64(len(e.text.Cursors)), e.cache.RectangleMatrix.Rows, e.cache.RectangleMatrix.Columns)
+		e.text.Cursors[len(e.text.Cursors)-1].Color = 0x00FF20FF
+		e.usernamesCursors[message.Username] = e.text.Cursors[len(e.text.Cursors)-1]
+		return
+	}
+	cursorId := e.usernamesCursors[message.Username].Id
+	switch message.Type {
+	case "insert":
+		e.text.InsertCharAfter(cursorId, rune(message.Char[0]))
+	case "remove":
+		e.text.RemoveCharBefore(cursorId)
+	case "move":
+		switch message.Direction {
+		case "up":
+			e.text.Cursors[cursorId].MoveUp()
+		case "down":
+			e.text.Cursors[cursorId].MoveDown()
+		case "left":
+			e.text.Cursors[cursorId].MoveLeft()
+		case "right":
+			e.text.Cursors[cursorId].MoveRight()
+		}
+	}
+}
+
+func (e *Engine) MoveCursor(direction sdl.Scancode, cursorId int64, mout chan *Message) {
 	cur := e.text.Cursors[cursorId]
 	switch direction {
 	case sdl.SCANCODE_LEFT:
 		cur.MoveLeft()
+		mout <- NewMoveMessage(e.client.Username, "left")
 	case sdl.SCANCODE_RIGHT:
 		cur.MoveRight()
+		mout <- NewMoveMessage(e.client.Username, "right")
 	case sdl.SCANCODE_UP:
 		cur.MoveUp()
+		mout <- NewMoveMessage(e.client.Username, "up")
 	case sdl.SCANCODE_DOWN:
 		cur.MoveDown()
+		mout <- NewMoveMessage(e.client.Username, "down")
 	case sdl.SCANCODE_HOME:
 		cur.MoveHome()
 	case 95:
