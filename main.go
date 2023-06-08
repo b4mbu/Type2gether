@@ -574,13 +574,15 @@ func (e *Engine) InsertChar(value rune, cursorId int64) {
 		//}
 	}
 }
-// костыль начинается тут...
-func FindTokensInString(s string) []uint32 {
+
+// возвращает массив длины текста
+// на i-ой позиции цвет i-го символа строки
+func HighlightTokensInString(s string) []uint32 {
     result := []uint32{}
     curStr := ""
 	for ind, char := range s {
         result = append(result, textmanager.FNTCLR)
-        if char == ' ' || char == '\n' {
+        if char == ' ' || char == '\n' || char == '(' || char == '{' {
 			if color, ok := textmanager.TokensColor[curStr]; ok {
                 // start coloring
                 for i:= ind - len(curStr); i < ind; i+=1 {
@@ -597,7 +599,7 @@ func FindTokensInString(s string) []uint32 {
             result[i] = color
         }
     }
-    //print(len(s) == len(result))
+    // assert(len(s) == len(result))
     return result
 }
 
@@ -638,7 +640,7 @@ func (e *Engine) renderText(cursorId int64) {
     // for tokens
     var currentColor uint32 = textmanager.FNTCLR
 
-    tokens := FindTokensInString(e.text.GetScreenString(0))
+    tokens := HighlightTokensInString(e.text.GetScreenString(0))
 
 	for ind, c := range e.text.GetScreenString(0) {
         currentColor = tokens[ind]

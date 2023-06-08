@@ -115,20 +115,9 @@ type Text struct {
 	Cursors []*Cursor
 }
 
-func InitMaxTokenLength() {
-	for k := range TokensColor {
-		if len(k) > MaxTokenLength {
-			MaxTokenLength = len(k)
-		}
-	}
-}
-
 func NewText() *Text {
 	t := new(Text)
 	t.PushBack(new(list.List[Char]))
-
-	InitMaxTokenLength()
-
 	return t
 }
 
@@ -193,7 +182,6 @@ func (t *Text) InsertCharAfter(cursorId int64, value rune) error {
 
 		cur.CharIter = cur.LineIter.GetValue().GetHead()
 		cur.Col = 0
-		t.DetectToken(cursorId)
 		return nil
 	}
 
@@ -205,65 +193,6 @@ func (t *Text) InsertCharAfter(cursorId int64, value rune) error {
 
 	cur.CharIter = cur.CharIter.GetNext()
 	cur.Col++
-	t.DetectToken(cursorId)
-	return nil
-}
-
-func (t *Text) DetectToken(cursorId int64) error {
-	if t.Cursors[cursorId].CharIter == nil {
-		return errors.New("CharIter is nil")
-	}
-
-	var (
-		ptr   = t.Cursors[cursorId].CharIter.GetPrev()
-		left  = t.Cursors[cursorId].CharIter
-		right = left
-	)
-
-	if ptr != nil {
-		for ptr.GetPrev() != nil && ptr.GetPrev().GetValue().Value != ' ' {
-			ptr = ptr.GetPrev()
-		}
-		left = ptr
-	}
-
-	ptr = t.Cursors[cursorId].CharIter.GetNext()
-	if ptr != nil {
-		for ptr.GetNext() != nil && ptr.GetNext().GetValue().Value != ' ' {
-			ptr = ptr.GetNext()
-		}
-		right = ptr
-	}
-
-	ptr = left
-	curToken := ""
-	for ptr != right.GetNext() {
-		if ptr.GetValue().Value == ' ' {
-			if color, ok := TokensColor[curToken]; ok {
-                // start coloring
-				val := left.GetValue()
-				val.Color = color
-				left.SetValue(val)
-				left = ptr.GetNext()
-                // end coloring
-				val = ptr.GetValue()
-				val.Color = FNTCLR
-                ptr.SetValue(val)
-				//println("token found: ", curToken)
-				curToken = ""
-			}
-		} else {
-			curToken += string(ptr.GetValue().Value)
-		}
-		ptr = ptr.GetNext()
-	}
-	if color, ok := TokensColor[curToken]; ok {
-		val := left.GetValue()
-		val.Color = color
-		left.SetValue(val)
-		//println("token found: ", curToken)
-	}
-
 	return nil
 }
 
