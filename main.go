@@ -575,14 +575,59 @@ func (e *Engine) InsertChar(value rune, cursorId int64) {
 	}
 }
 
+
+func Contains(s []rune, e rune) bool {
+    for _, a := range s {
+        if a == e {
+            return true
+        }
+    }
+    return false
+}
 // возвращает массив длины текста
 // на i-ой позиции цвет i-го символа строки
 func HighlightTokensInString(s string) []uint32 {
-    result := []uint32{}
+    result := make([]uint32, len(s))
+    separators := []rune{' ','\n','(','{','}',')',';','/', '"'}
     curStr := ""
+    lineCommentFlag := 0
+    stringStartFlag := 0
 	for ind, char := range s {
-        result = append(result, textmanager.FNTCLR)
-        if char == ' ' || char == '\n' || char == '(' || char == '{' {
+        if stringStartFlag == 1 {
+            if char == '"' {
+                stringStartFlag = 0
+            }
+            // гарантируется что существует предыдущий символ, т.к. в данной
+            // ветке рассматривается случай, когда до текущего символа встретился '"'
+            result[ind - 1] = textmanager.GREEN
+            result[ind] = textmanager.GREEN
+            continue
+        }
+
+        if char == '/' {
+            lineCommentFlag++
+        } else if lineCommentFlag < 2 {
+            lineCommentFlag = 0
+        }
+
+        if lineCommentFlag >= 2 {
+            // гарантируется что существует предыдущий символ, т.к. в данной
+            // ветке рассматривается случай, когда идёт два символа '\' подряд
+            result[ind - 1] = textmanager.GREY
+            result[ind] = textmanager.GREY
+            if char == '\n' {
+                lineCommentFlag = 0
+                curStr = ""
+            }
+            continue
+        }
+
+        if char == '"' {
+            stringStartFlag = 1
+        }
+
+        result[ind] = textmanager.FNTCLR
+        if Contains(separators, char) {
 			if color, ok := textmanager.TokensColor[curStr]; ok {
                 // start coloring
                 for i:= ind - len(curStr); i < ind; i+=1 {

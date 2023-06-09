@@ -8,26 +8,32 @@ import (
 const (
 	endl = '\n'
     PURPLE  = 0xDC42DDFF
+    GOLD    = 0xD4AF37FF
     RED     = 0x51D718FF
     RED2    = 0xFF8300FF
     BLUE    = 0x8A6CD5FF
     CIAN    = 0xF5A58DFF
     PINK    = 0x0893FCFF
+    GREY    = 0xC7D7CFFF
+    GREEN   = 0x51D733FF
     FNTCLR  = 0xFFFFFFFF
     LNNMBC  = 0xbd93f9FF
 )
 
-var COLORS = []uint32{PURPLE, RED, BLUE, CIAN, PINK, FNTCLR, LNNMBC, RED2}
+var COLORS = []uint32{GREEN, GREY, GOLD, PURPLE, BLUE, CIAN, PINK, FNTCLR, LNNMBC, RED2}
 
 var (
 	TokensColor = map[string]uint32{
 		"for": PURPLE,
-		"while": RED,
+		"while": PURPLE,
 		"if": BLUE,
 		"else": BLUE,
 		"return": RED2,
 		"int": CIAN,
 		"long": CIAN,
+        "bool": GOLD,
+        "true": PINK,
+        "false": PINK,
 		"aboba": PINK,
 	}
 	MaxTokenLength int
