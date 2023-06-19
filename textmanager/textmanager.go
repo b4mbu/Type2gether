@@ -56,8 +56,8 @@ type Cursor struct {
 
 	ScreenHead *Border
 	ScreenTail *Border
-	ScreenRow  int32
-	ScreenCol  int32
+	ScreenRowsCount  int32
+	ScreenColsCount  int32
 }
 
 //Эта структура нужна для скрола
@@ -107,6 +107,17 @@ func (cur *Cursor) ScrollDown() {
 	}
 }
 
+func (cur *Cursor) FixLeftScreen() {
+    if cur.ScreenLeft - 1 > cur.Col {
+        cur.ScreenLeft = cur.Col + 1
+    } else if cur.Col - cur.ScreenLeft > cur.ScreenColsCount {
+        cur.ScreenLeft = cur.Col - cur.ScreenColsCount
+    }
+    if cur.ScreenLeft < 0 {
+        cur.ScreenLeft = 0
+    }
+}
+
 /*
 type Line struct {
     Value       *list.List[rune]
@@ -129,13 +140,13 @@ func NewText() *Text {
 
 // TODO написать присвоение id для курсора
 // TODO на данном этапе при создании NewCursor просто всегда будем 0 в него передавать, когда будем писать серверную часть нужно будет определиться с созданием Id
-func NewCursor(Id int64, ScreenRow, ScreenCol int32) *Cursor {
+func NewCursor(Id int64, ScreenRowsCount, ScreenColsCount int32) *Cursor {
 	c := new(Cursor)
 	c.Row = 0
 	c.Col = -1
 	c.Id = Id
-	c.ScreenRow = ScreenRow
-	c.ScreenCol = ScreenCol
+	c.ScreenRowsCount = ScreenRowsCount
+	c.ScreenColsCount = ScreenColsCount
 	c.ScreenLeft = 0
 	c.ScreenHead = &Border{RowNumber: 0}
 	c.ScreenTail = &Border{RowNumber: 0}
@@ -154,7 +165,7 @@ func (t *Text) SetCursorStartPosition(cursorId int64) {
 	cur.ScreenHead = &Border{LineIter: t.GetHead(), RowNumber: 0} // Егор сказал, что выстрелит, но куда... (создаем новый объект, а не меняем старый)
 
 	cur.ScreenTail = &Border{LineIter: t.GetHead(), RowNumber: 0}
-	for i := 1; i < int(t.Cursors[cursorId].ScreenRow); i++ {
+	for i := 1; i < int(t.Cursors[cursorId].ScreenRowsCount); i++ {
 		if err := cur.ScreenTail.Down(); err != nil {
 			return
 		}
@@ -188,6 +199,8 @@ func (t *Text) InsertCharAfter(cursorId int64, value rune) error {
 
 		cur.CharIter = cur.LineIter.GetValue().GetHead()
 		cur.Col = 0
+        // пересчитываем screen left
+        cur.FixLeftScreen()
 		return nil
 	}
 
@@ -199,6 +212,8 @@ func (t *Text) InsertCharAfter(cursorId int64, value rune) error {
 
 	cur.CharIter = cur.CharIter.GetNext()
 	cur.Col++
+    // пересчитываем screen left
+    cur.FixLeftScreen()
 	return nil
 }
 
@@ -237,7 +252,7 @@ func (t *Text) InsertLineAfter(cursorId int64) error {
 				return err
 			}
 
-			if cur.ScreenTail.RowNumber-cur.ScreenHead.RowNumber+1 >= cur.ScreenRow {
+			if cur.ScreenTail.RowNumber-cur.ScreenHead.RowNumber+1 >= cur.ScreenRowsCount {
 				if cur.LineIter == cur.ScreenTail.LineIter {
 					cur.ScrollDown()
 				} else {
@@ -263,6 +278,8 @@ func (t *Text) InsertLineAfter(cursorId int64) error {
 
 			cur.Row++
 			cur.Col = -1
+            // пересчитываем screen left
+            cur.FixLeftScreen()
 			return nil
 		}
 		// line is empty
@@ -272,7 +289,7 @@ func (t *Text) InsertLineAfter(cursorId int64) error {
 			return err
 		}
 
-		if cur.ScreenTail.RowNumber-cur.ScreenHead.RowNumber+1 >= cur.ScreenRow {
+		if cur.ScreenTail.RowNumber-cur.ScreenHead.RowNumber+1 >= cur.ScreenRowsCount {
 			if cur.LineIter == cur.ScreenTail.LineIter {
 				cur.ScrollDown()
 			} else {
@@ -294,6 +311,8 @@ func (t *Text) InsertLineAfter(cursorId int64) error {
 
 		cur.Row++
 		cur.Col = -1
+        // пересчитываем screen left
+        cur.FixLeftScreen()
 		return nil
 	}
 
@@ -316,7 +335,7 @@ func (t *Text) InsertLineAfter(cursorId int64) error {
 	}
 	oldLineIter.SetNext(node)
 
-	if cur.ScreenTail.RowNumber-cur.ScreenHead.RowNumber+1 >= cur.ScreenRow {
+	if cur.ScreenTail.RowNumber-cur.ScreenHead.RowNumber+1 >= cur.ScreenRowsCount {
 		if cur.LineIter == cur.ScreenTail.LineIter {
 			cur.ScrollDown()
 		} else {
@@ -338,6 +357,8 @@ func (t *Text) InsertLineAfter(cursorId int64) error {
 
 	cur.Row++
 	cur.Col = -1
+    // пересчитываем screen left
+    cur.FixLeftScreen()
 	return nil
 }
 
@@ -366,7 +387,7 @@ func (t *Text) RemoveCharBefore(cursorId int64) error {
 				}
 			}
 		} else if cur.ScreenHead.LineIter == cur.LineIter {
-			if cur.ScreenTail.RowNumber-cur.ScreenHead.RowNumber+1 >= cur.ScreenRow {
+			if cur.ScreenTail.RowNumber-cur.ScreenHead.RowNumber+1 >= cur.ScreenRowsCount {
 				if err := cur.ScreenHead.Up(); err == nil {
 					cur.ScreenTail.RowNumber--
 				}
@@ -376,7 +397,7 @@ func (t *Text) RemoveCharBefore(cursorId int64) error {
 				}
 			}
 		} else {
-			if cur.ScreenTail.RowNumber-cur.ScreenHead.RowNumber+1 >= cur.ScreenRow {
+			if cur.ScreenTail.RowNumber-cur.ScreenHead.RowNumber+1 >= cur.ScreenRowsCount {
 				err := cur.ScreenTail.Down()
 				if err != nil {
 				}
@@ -399,6 +420,8 @@ func (t *Text) RemoveCharBefore(cursorId int64) error {
 		cur.Row--
 		cur.Col = oldLen - 1
 
+        // пересчитываем screen left
+        cur.FixLeftScreen()
 		return nil
 	}
 
@@ -411,6 +434,8 @@ func (t *Text) RemoveCharBefore(cursorId int64) error {
 
 	cur.CharIter = newCharIter
 	cur.Col--
+    // пересчитываем screen left
+    cur.FixLeftScreen()
 
 	return nil
 }
@@ -458,6 +483,37 @@ func (t *Text) GetString() string {
 	return str
 }
 
+func (t *Text) GetScreenString(cursorId int32) string {
+	cur := t.Cursors[cursorId]
+	if cur.ScreenHead.LineIter == nil || cur.ScreenTail.LineIter == nil {
+		//printtln("ScreenHead is nil")
+		return ""
+	}
+	ptr1 := cur.ScreenHead.LineIter
+	//printtln(cur.ScreenHead, cur.ScreenTail)
+	res := ""
+    // итерируемся по каждой строчке
+	for ptr1 != nil && ptr1 != cur.ScreenTail.LineIter.GetNext() {
+		ptr2 := ptr1.GetValue().GetHead()
+        // смотрим, если строка не пустая и в ней достаточно символов
+        // чтобы их было видно на экране в данный момент
+        if ptr2 != nil && ptr1.GetValue().Length() >= cur.ScreenLeft {
+            // начинаем брать строчку с первого символа, который попадает на экран
+            ptr2 = ptr1.GetValue().GetNodeByIndex(cur.ScreenLeft)
+            currentLen := int32(0)
+            // выдаём либо все символы строки, которые помещаются на экран
+            for ptr2 != nil && currentLen <= cur.ScreenColsCount {
+                currentLen++
+                res += string(ptr2.GetValue().Value)
+                ptr2 = ptr2.GetNext()
+            }
+        }
+        res += "\n"
+		ptr1 = ptr1.GetNext()
+	}
+	return res
+}
+/*
 // TODO think about width
 func (t *Text) GetScreenString(cursorId int32) string {
 	cur := t.Cursors[cursorId]
@@ -481,15 +537,15 @@ func (t *Text) GetScreenString(cursorId int32) string {
 	//printtln("res: ", res)
 	return res
 }
-
+*/
 func (cur *Cursor) MoveLeft() {
-	if cur.CharIter == nil {
-		if cur.LineIter.GetPrev() == nil {
+	if cur.CharIter == nil { // значит мы стоим в начале строчки
+		if cur.LineIter.GetPrev() == nil { // значит мы стоим вверху текста
 			return
 		}
 
 		if cur.ScreenHead.LineIter == cur.LineIter {
-			if cur.ScreenTail.RowNumber-cur.ScreenHead.RowNumber+1 >= cur.ScreenRow {
+			if cur.ScreenTail.RowNumber-cur.ScreenHead.RowNumber+1 >= cur.ScreenRowsCount {
 				cur.ScrollUp()
 			} else {
 				cur.ScreenHead.Up()
@@ -501,11 +557,17 @@ func (cur *Cursor) MoveLeft() {
 		cur.Row--
 
 		cur.Col = cur.LineIter.GetValue().Length() - 1
+
+        // пересчитываем screen left
+        cur.FixLeftScreen()
+
 		return
 	}
 
 	cur.CharIter = cur.CharIter.GetPrev()
 	cur.Col--
+    // пересчитываем screen left
+    cur.FixLeftScreen()
 }
 
 func (cur *Cursor) MoveRight() {
@@ -516,7 +578,7 @@ func (cur *Cursor) MoveRight() {
 			}
 
 			if cur.ScreenTail.LineIter == cur.LineIter {
-				if cur.ScreenTail.RowNumber-cur.ScreenHead.RowNumber+1 >= cur.ScreenRow {
+				if cur.ScreenTail.RowNumber-cur.ScreenHead.RowNumber+1 >= cur.ScreenRowsCount {
 					cur.ScrollDown()
 				}
 			}
@@ -525,11 +587,16 @@ func (cur *Cursor) MoveRight() {
 			cur.CharIter = nil
 			cur.Row++
 			cur.Col = -1
+
+            // пересчитываем screen left
+            cur.FixLeftScreen()
 			return
 		}
 
 		cur.CharIter = cur.LineIter.GetValue().GetHead()
 		cur.Col = 0
+        // пересчитываем screen left
+        cur.FixLeftScreen()
 		return
 	}
 
@@ -539,7 +606,7 @@ func (cur *Cursor) MoveRight() {
 		}
 
 		if cur.ScreenTail.LineIter == cur.LineIter {
-			if cur.ScreenTail.RowNumber-cur.ScreenHead.RowNumber+1 >= cur.ScreenRow {
+			if cur.ScreenTail.RowNumber-cur.ScreenHead.RowNumber+1 >= cur.ScreenRowsCount {
 				cur.ScrollDown()
 			}
 		}
@@ -548,11 +615,15 @@ func (cur *Cursor) MoveRight() {
 		cur.CharIter = nil
 		cur.Row++
 		cur.Col = -1
+        // пересчитываем screen left
+        cur.FixLeftScreen()
 		return
 	}
 
 	cur.CharIter = cur.CharIter.GetNext()
 	cur.Col++
+    // пересчитываем screen left
+    cur.FixLeftScreen()
 }
 
 func (cur *Cursor) MoveUp() {
@@ -561,7 +632,7 @@ func (cur *Cursor) MoveUp() {
 	}
 
 	if cur.ScreenHead.LineIter == cur.LineIter {
-		if cur.ScreenTail.RowNumber-cur.ScreenHead.RowNumber+1 >= cur.ScreenRow {
+		if cur.ScreenTail.RowNumber-cur.ScreenHead.RowNumber+1 >= cur.ScreenRowsCount {
 			cur.ScrollUp()
 		} else {
 			cur.ScreenHead.Up()
@@ -573,6 +644,8 @@ func (cur *Cursor) MoveUp() {
 	cur.LineIter = cur.LineIter.GetPrev()
 	cur.Row--
 	cur.Col = cur.LineIter.GetValue().Index(cur.CharIter)
+    // пересчитываем screen left
+    cur.FixLeftScreen()
 }
 
 func (cur *Cursor) MoveDown() {
@@ -581,7 +654,7 @@ func (cur *Cursor) MoveDown() {
 	}
 
 	if cur.ScreenTail.LineIter == cur.LineIter {
-		if cur.ScreenTail.RowNumber-cur.ScreenHead.RowNumber+1 >= cur.ScreenRow {
+		if cur.ScreenTail.RowNumber-cur.ScreenHead.RowNumber+1 >= cur.ScreenRowsCount {
 			cur.ScrollDown()
 		}
 	}
@@ -591,14 +664,20 @@ func (cur *Cursor) MoveDown() {
 	cur.LineIter = cur.LineIter.GetNext()
 	cur.Row++
 	cur.Col = cur.LineIter.GetValue().Index(cur.CharIter)
+    // пересчитываем screen left
+    cur.FixLeftScreen()
 }
 
 func (cur *Cursor) MoveHome() {
 	cur.CharIter = nil
 	cur.Col = -1
+    // пересчитываем screen left
+    cur.FixLeftScreen()
 }
 
 func (cur *Cursor) MoveEnd() {
 	cur.CharIter = cur.LineIter.GetValue().GetTail()
 	cur.Col = cur.LineIter.GetValue().Length() - 1
+    // пересчитываем screen left
+    cur.FixLeftScreen()
 }

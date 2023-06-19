@@ -117,6 +117,9 @@ type Engine struct {
 	LineNumbersColor           uint32
 	TextBackgroundColor        uint32
 	CursorColor                uint32
+
+    // отступ дл нумирации строк на экране
+    CharCountInLineNumber      int32
 }
 
 func (e *Engine) RenderCursor(cursorId int64) {
@@ -132,7 +135,7 @@ func (e *Engine) RenderCursor(cursorId int64) {
 		cur := e.text.Cursors[i]
 		//println("Cur head: ", cur.ScreenHead.RowNumber, "Cur tail: ", cur.ScreenTail.RowNumber)
 		e.renderer.SetDrawColor(hexToRBGA(cur.Color))
-		col := cur.Col
+		col := cur.Col - leftBorder
 		// TODO отображать относительно Одного курсора, поэтому cur.ScreenHead.RowNumber не годится (относительно самого себя)
 		row := cur.Row - cur.ScreenHead.RowNumber
 		var padding int32
@@ -143,20 +146,18 @@ func (e *Engine) RenderCursor(cursorId int64) {
 		}
 
 		if col == -1 {
-			col = 4 - leftBorder
+			col = e.CharCountInLineNumber
 			padding = 0
 		} else {
-			if col < leftBorder-1 {
+			if col < -1 {
 				continue
 			}
-			if col == leftBorder-1 && leftBorder != 0 {
+			if col == - 1 && leftBorder != 0 {
 				//println("\t\t\tLEFTBORDER")
 				col++
 				padding = 0
-				col -= leftBorder
 				col += 4
 			} else {
-				col -= leftBorder
 				col += 4
 				padding = e.GetRectFromMatrix(row, col).W
 			}
@@ -218,7 +219,7 @@ func NewEngine(windowWidth, windowHeight int32,
 
 	configRendererScale(renderer, windowWidth, windowHeight)
 
-	engine := &Engine{
+	engine := &Engine {
 		renderer:                   renderer,
 		window:                     window,
 		text:                       textmanager.NewText(),
@@ -226,6 +227,7 @@ func NewEngine(windowWidth, windowHeight int32,
 		LineNumbersColor:           lineNumbersColor,
 		TextBackgroundColor:        textBackgroundColor,
 		CursorColor:                cursorColor,
+        CharCountInLineNumber:      4, // значение по умолчанию, я так захотел!!
 	}
 
 	err = engine.SetFont(fontFilename, fontSize, fontSpaceBetween, fontColor, lineNumbersColor)
@@ -241,7 +243,12 @@ func NewEngine(windowWidth, windowHeight int32,
 	}
 
 	// TODO server.createCursor(id) ??
-	cur := textmanager.NewCursor(0, engine.cache.RectangleMatrix.Rows, engine.cache.RectangleMatrix.Columns)
+	cur := textmanager.NewCursor(
+        0,
+        engine.cache.RectangleMatrix.Rows,
+        engine.cache.RectangleMatrix.Columns - engine.CharCountInLineNumber - 2 , // ещё -2 чтобы курсор влез на экран
+    )
+
 	cur.LineIter = engine.text.GetHead()
 	cur.CharIter = nil
 	cur.Color = cursorColor
@@ -544,6 +551,7 @@ func (e *Engine) EraseChar(key sdl.Scancode, cursorId int64) {
 	switch key {
 	case sdl.SCANCODE_BACKSPACE:
 		err = e.text.RemoveCharBefore(cursorId)
+        //print("res: ", e.text.GetScreenString(0))
 	case sdl.SCANCODE_DELETE:
 		err = e.text.RemoveCharAfter(cursorId)
 	}
@@ -648,26 +656,47 @@ func HighlightTokensInString(s string) []uint32 {
     return result
 }
 
-
+// TODO переписать)))
 func (e *Engine) renderText(cursorId int64) {
 	e.renderer.Clear()
 	var (
 		// e.font.GetSpaceBetween равен 0, поэтому он сейчас ни на что не влияет || тут +7 px это просто отступ от первой цифры
-		paddingLeft int32 = (e.font.GetSpaceBetween()+e.cache.PreRenderredCharTextures[rune('1')][textmanager.FNTCLR].Width)*4 + 7
+		col int32 = e.CharCountInLineNumber
+		paddingLeft int32 = (e.font.GetSpaceBetween()+e.cache.PreRenderredCharTextures[rune('1')][textmanager.FNTCLR].Width)*col + 7
 		X           int32 = paddingLeft
 		Y           int32 = 0
 		row         int32 = 0
 		// тут col равен 4 потому что мы 4 колоноки оставляем под нумерацию
-		col int32 = 4
 		// TODO относительные координаты курсора от экрана
 
-		delta int32 = e.text.Cursors[cursorId].Col - e.cache.RectangleMatrix.Columns + 2 + 4
+		//delta int32 = e.text.Cursors[cursorId].Col - e.cache.RectangleMatrix.Columns + 2 + 4
 	)
 
 	e.renderBackground(paddingLeft)
+    var currentColor uint32 = textmanager.FNTCLR
+	for _, c := range e.text.GetScreenString(0) {
+        if c == '\n' {
+            Y += e.font.GetSize()
+            X = paddingLeft + e.font.GetSpaceBetween()
+            row++
+            col = e.CharCountInLineNumber
+            continue
+        }
+        if col >= e.cache.RectangleMatrix.Columns {
+            continue // это из-за  лишних чимволов которые появляются из-за отсптупа для номеров строк 
+        }
+        // TODO write setter for this ->
+		e.GetRectFromMatrix(row, col).H = e.font.GetSize()
+		e.GetRectFromMatrix(row, col).W = e.cache.PreRenderredCharTextures[rune(c)][currentColor].Width
+		e.GetRectFromMatrix(row, col).X = X
+		e.GetRectFromMatrix(row, col).Y = Y
+		e.renderer.Copy(e.cache.PreRenderredCharTextures[rune(c)][currentColor].Texture, nil, e.GetRectFromMatrix(row, col))
+		X += e.cache.PreRenderredCharTextures[rune(c)][currentColor].Width + e.font.GetSpaceBetween()
+        col++
+	}
 	//println("delta:",  delta)
-
-	leftBorder := e.text.Cursors[cursorId].ScreenLeft
+    /*
+	//leftBorder := e.text.Cursors[cursorId].ScreenLeft
 	//println("LeftBorderText: ", leftBorder)
 	if e.text.Cursors[cursorId].Col < leftBorder {
 		e.text.Cursors[cursorId].ScreenLeft = e.text.Cursors[cursorId].Col + 1
@@ -686,7 +715,6 @@ func (e *Engine) renderText(cursorId int64) {
     var currentColor uint32 = textmanager.FNTCLR
 
     tokens := HighlightTokensInString(e.text.GetScreenString(0))
-
 	for ind, c := range e.text.GetScreenString(0) {
         currentColor = tokens[ind]
 		if col-4 < delta {
@@ -727,6 +755,7 @@ func (e *Engine) renderText(cursorId int64) {
 		}
 	}
 
+    */
 	cur := e.text.Cursors[cursorId]
 	row = 0
 	col = 3
