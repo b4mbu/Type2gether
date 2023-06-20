@@ -3,7 +3,6 @@ package textmanager
 import (
 	"Type2gether/list"
 	"errors"
-	"unicode"
 )
 
 type Term = byte
@@ -16,6 +15,8 @@ const (
 	Bool
 	Digit
 	Return
+	Comment
+	String
 	Special
 )
 
@@ -216,83 +217,106 @@ func (t *Text) InsertCharAfter(cursorId int64, value rune) error {
 	return nil
 }
 
+func Contains(s []rune, e rune) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
+}
+
 func (t *Text) DetectTerms(cursorId int64) error {
 	if t.Cursors[cursorId].CharIter == nil {
 		return errors.New("CharIter is nil")
 	}
 
 	var (
-		ptr   = t.Cursors[cursorId].CharIter.GetPrev()
-		left  = t.Cursors[cursorId].CharIter
-		right = left
+		ptr                              = t.Cursors[cursorId].LineIter.GetValue().GetHead()
+		prev            *list.Node[Char] = nil
+		separators                       = []rune{' ', '\n', '(', '{', '}', ')', ';', '/', '"'}
+		curStr                           = ""
+		lineCommentFlag                  = 0
+		stringStartFlag                  = 0
 	)
 
-	if ptr != nil {
-		for ptr.GetPrev() != nil && ptr.GetPrev().GetValue().Value != ' ' {
-			ptr = ptr.GetPrev()
-		}
-		left = ptr
-	}
+	for ptr != nil {
+		char := ptr.GetValue().Value
+		if stringStartFlag == 1 {
+			if char == '"' {
+				stringStartFlag = 0
+			}
+			// гарантируется что существует предыдущий символ, т.к. в данной
+			// ветке рассматривается случай, когда до текущего символа встретился '"'
 
-	ptr = t.Cursors[cursorId].CharIter.GetNext()
-	if ptr != nil {
-		for ptr.GetNext() != nil && ptr.GetNext().GetValue().Value != ' ' {
+			SetTermType(ptr, String)
+			SetTermType(ptr.GetPrev(), String)
+			prev = ptr
 			ptr = ptr.GetNext()
+			continue
 		}
-		right = ptr
-	}
 
-	ptr = left
-	curToken := ""
-	onlyDigits := true
-	for ptr != right.GetNext() {
-		if !unicode.IsDigit(ptr.GetValue().Value) && ptr.GetValue().Value != ' ' {
-			onlyDigits = false
+		if char == '/' {
+			lineCommentFlag++
+		} else if lineCommentFlag < 2 {
+			lineCommentFlag = 0
 		}
-		if ptr.GetValue().Value == ' ' {
-			var termType Term
-			if onlyDigits {
-				termType = Digit
-			} else {
-				var ok bool
-				termType, ok = TokensTerm[curToken]
-				if !ok {
-					termType = Normal
+
+		if lineCommentFlag >= 2 {
+			// гарантируется что существует предыдущий символ, т.к. в данной
+			// ветке рассматривается случай, когда идёт два символа '\' подряд
+			SetTermType(ptr, Comment)
+			SetTermType(ptr.GetPrev(), Comment)
+
+			if char == '\n' {
+				lineCommentFlag = 0
+				curStr = ""
+			}
+			prev = ptr
+			ptr = ptr.GetNext()
+			continue
+		}
+
+		if char == '"' {
+			stringStartFlag = 1
+		}
+
+		SetTermType(ptr, Normal)
+
+		if Contains(separators, char) {
+			if term, ok := TokensTerm[curStr]; ok {
+				backPtr := ptr.GetPrev()
+				for i := 0; i < len(curStr); i++ {
+					SetTermType(backPtr, term)
+					backPtr = backPtr.GetPrev()
 				}
 			}
-			for left != ptr {
-				val := left.GetValue()
-				val.TermType = termType
-				left.SetValue(val)
-				left = left.GetNext()
-			}
-			left = ptr.GetNext()
-			println("token found: ", curToken)
-			curToken = ""
-			onlyDigits = true
+			curStr = ""
 		} else {
-			curToken += string(ptr.GetValue().Value)
+			curStr += string(char)
 		}
+		prev = ptr
 		ptr = ptr.GetNext()
 	}
-	var termType Term
-	if onlyDigits {
-		termType = Digit
-	} else {
-		var ok bool
-		termType, ok = TokensTerm[curToken]
-		if !ok {
-			termType = Normal
-		}
-	}
-	for left != ptr {
-		val := left.GetValue()
-		val.TermType = termType
-		left.SetValue(val)
-		left = left.GetNext()
+
+	if prev == nil {
+		return nil
 	}
 
+	if term, ok := TokensTerm[curStr]; ok {
+		backPtr := prev
+		for i := 0; i < len(curStr); i++ {
+			SetTermType(backPtr, term)
+			backPtr = backPtr.GetPrev()
+		}
+	}
 	return nil
+}
+
+func SetTermType(ptr *list.Node[Char], term Term) {
+	cur := ptr.GetValue()
+	cur.TermType = term
+	ptr.SetValue(cur)
 }
 
 // TODO validation

@@ -33,6 +33,8 @@ var Colors = map[textmanager.Term]uint32{
 	textmanager.Bool:      BEIGE,
 	textmanager.Digit:     GREY,
 	textmanager.Return:    ORANGE,
+	textmanager.String:    GREEN,
+	textmanager.Comment:   GOLD,
 	textmanager.Special:   GOLD,
 }
 
