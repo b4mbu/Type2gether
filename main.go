@@ -11,6 +11,31 @@ import (
 	"github.com/veandco/go-sdl2/ttf"
 )
 
+const (
+	PURPLE     = 0xDC42DDFF
+	GOLD       = 0xD4AF37FF
+	RED        = 0x51D718FF
+	ORANGE     = 0xFF8300FF
+	DARKPURPLE = 0x8A6CD5FF
+	BEIGE      = 0xF5A58DFF
+	BLUE       = 0x0893FCFF
+	GREY       = 0xC7D7CFFF
+	GREEN      = 0x51D733FF
+	WHITE      = 0xFFFFFFFF
+	LNNMBC     = 0xbd93f9FF
+)
+
+var Colors = map[textmanager.Term]uint32{
+	textmanager.Normal:    WHITE,
+	textmanager.Loop:      PURPLE,
+	textmanager.Condition: BLUE,
+	textmanager.Type:      DARKPURPLE,
+	textmanager.Bool:      BEIGE,
+	textmanager.Digit:     GREY,
+	textmanager.Return:    ORANGE,
+	textmanager.Special:   GOLD,
+}
+
 func hexToSdlColor(color uint32) sdl.Color {
 	r, g, b, a := hexToRBGA(color)
 	return sdl.Color{R: r, G: g, B: b, A: a}
@@ -51,7 +76,7 @@ func GUIStop() {
 type Cache struct {
 	PreRenderredCharTextures map[rune]map[uint32]CharTexture
 
-    // TODO replace that
+	// TODO replace that
 	PreRenderredNumsTextures map[rune]CharTexture
 	RectangleMatrix          *RectangleMatrix
 }
@@ -62,7 +87,7 @@ type RectangleMatrix struct {
 	Columns         int32
 }
 
-func NewRectangleMatrix(rows, columns, fontSize, SpaceBetween int32) *RectangleMatrix {
+func NewRectangleMatrix(rows, columns, fontSize, XBegin int32) *RectangleMatrix {
 	rectangleMatrix := &RectangleMatrix{
 		Rows:    rows,
 		Columns: columns,
@@ -70,7 +95,7 @@ func NewRectangleMatrix(rows, columns, fontSize, SpaceBetween int32) *RectangleM
 	rectangleMatrix.RectangleMatrix = make([][]*sdl.Rect, rows)
 	for i := int32(0); i < rows; i++ {
 		for j := int32(0); j < columns; j++ {
-			rectangleMatrix.RectangleMatrix[i] = append(rectangleMatrix.RectangleMatrix[i], &sdl.Rect{X: SpaceBetween, Y: i * fontSize})
+			rectangleMatrix.RectangleMatrix[i] = append(rectangleMatrix.RectangleMatrix[i], &sdl.Rect{X: XBegin, Y: i * fontSize})
 		}
 	}
 	return rectangleMatrix
@@ -118,8 +143,8 @@ type Engine struct {
 	TextBackgroundColor        uint32
 	CursorColor                uint32
 
-    // отступ дл нумирации строк на экране
-    CharCountInLineNumber      int32
+	// отступ дл нумирации строк на экране
+	CharCountInLineNumber int32
 }
 
 func (e *Engine) RenderCursor(cursorId int64) {
@@ -152,13 +177,13 @@ func (e *Engine) RenderCursor(cursorId int64) {
 			if col < -1 {
 				continue
 			}
-			if col == - 1 && leftBorder != 0 {
+			if col == -1 && leftBorder != 0 {
 				//println("\t\t\tLEFTBORDER")
 				col++
 				padding = 0
-				col += 4
+				col += e.CharCountInLineNumber
 			} else {
-				col += 4
+				col += e.CharCountInLineNumber
 				padding = e.GetRectFromMatrix(row, col).W
 			}
 		}
@@ -219,7 +244,7 @@ func NewEngine(windowWidth, windowHeight int32,
 
 	configRendererScale(renderer, windowWidth, windowHeight)
 
-	engine := &Engine {
+	engine := &Engine{
 		renderer:                   renderer,
 		window:                     window,
 		text:                       textmanager.NewText(),
@@ -227,7 +252,7 @@ func NewEngine(windowWidth, windowHeight int32,
 		LineNumbersColor:           lineNumbersColor,
 		TextBackgroundColor:        textBackgroundColor,
 		CursorColor:                cursorColor,
-        CharCountInLineNumber:      4, // значение по умолчанию, я так захотел!!
+		CharCountInLineNumber:      4, // значение по умолчанию, я так захотел!!
 	}
 
 	err = engine.SetFont(fontFilename, fontSize, fontSpaceBetween, fontColor, lineNumbersColor)
@@ -244,10 +269,10 @@ func NewEngine(windowWidth, windowHeight int32,
 
 	// TODO server.createCursor(id) ??
 	cur := textmanager.NewCursor(
-        0,
-        engine.cache.RectangleMatrix.Rows,
-        engine.cache.RectangleMatrix.Columns - engine.CharCountInLineNumber - 2 , // ещё -2 чтобы курсор влез на экран
-    )
+		0,
+		engine.cache.RectangleMatrix.Rows,
+		engine.cache.RectangleMatrix.Columns-engine.CharCountInLineNumber-2, // ещё -2 чтобы курсор влез на экран
+	)
 
 	cur.LineIter = engine.text.GetHead()
 	cur.CharIter = nil
@@ -298,13 +323,13 @@ func (e *Engine) Stop() {
 			if mapColor == nil {
 				continue
 			}
-            for _, texture := range mapColor {
-                if texture.Texture == nil {
-                    continue
-                }
+			for _, texture := range mapColor {
+				if texture.Texture == nil {
+					continue
+				}
 
-                texture.Texture.Destroy()
-            }
+				texture.Texture.Destroy()
+			}
 		}
 	}
 	// TODO think about dele all text ???
@@ -400,9 +425,9 @@ func (e *Engine) SetCache(supportedChars string) error {
 
 	cache := &Cache{}
 	cache.PreRenderredCharTextures = make(map[rune]map[uint32]CharTexture)
-    for _, char := range supportedChars {
-        cache.PreRenderredCharTextures[char] = make(map[uint32]CharTexture)
-    }
+	for _, char := range supportedChars {
+		cache.PreRenderredCharTextures[char] = make(map[uint32]CharTexture)
+	}
 	cache.PreRenderredNumsTextures = make(map[rune]CharTexture)
 
 	var (
@@ -412,24 +437,26 @@ func (e *Engine) SetCache(supportedChars string) error {
 	)
 
 	for _, char := range supportedChars {
-        for _, color := range textmanager.COLORS {
-            fontSurface, _ := e.font.ttfFont.RenderGlyphBlended(char, hexToSdlColor(color))
-            texture, _ := e.renderer.CreateTextureFromSurface(fontSurface)
-            cache.PreRenderredCharTextures[char][color] = CharTexture{texture, fontSurface.W}
-            if fontSurface.W < width {
-                width = fontSurface.W
-            }
-            if fontSurface.H > mx {
-                mx = fontSurface.H
-            }
-        }
+		for _, color := range Colors {
+			fontSurface, _ := e.font.ttfFont.RenderGlyphBlended(char, hexToSdlColor(color))
+			texture, _ := e.renderer.CreateTextureFromSurface(fontSurface)
+			cache.PreRenderredCharTextures[char][color] = CharTexture{texture, fontSurface.W}
+			if fontSurface.W < width {
+				width = fontSurface.W
+			}
+			if fontSurface.H > mx {
+				mx = fontSurface.H
+			}
+		}
 	}
 
+	var digitWidth int32
 	// cache all digits for rendering Numbers of Rows
 	for _, char := range "0123456789" {
 		numsSurface, _ := e.font.ttfFont.RenderGlyphBlended(char, e.font.GetNumColor())
 		texture, _ := e.renderer.CreateTextureFromSurface(numsSurface)
 		cache.PreRenderredNumsTextures[char] = CharTexture{texture, numsSurface.W}
+		digitWidth = numsSurface.W
 	}
 
 	var (
@@ -437,8 +464,8 @@ func (e *Engine) SetCache(supportedChars string) error {
 		rows    = h / height
 		columns = w / (width + e.font.GetSpaceBetween())
 	)
-	//println("h:", h, "mx:", mx, "height:", height)
-	cache.RectangleMatrix = NewRectangleMatrix(rows, columns, e.font.GetSize(), e.font.GetSpaceBetween())
+
+	cache.RectangleMatrix = NewRectangleMatrix(rows, columns, e.font.GetSize(), e.CharCountInLineNumber*digitWidth+e.font.GetSpaceBetween()+7) // +7 MUST BE HERE. Как в renderText padding = ... + 7
 	e.cache = cache
 
 	return nil
@@ -471,7 +498,7 @@ func (e *Engine) Loop() {
 	if err != nil {
 		//println(err)
 	}
-	e.renderText(DEBUG_CUR_ID)
+	e.RenderText(DEBUG_CUR_ID)
 	for running {
 		event := sdl.WaitEvent()
 		if event == nil {
@@ -486,7 +513,7 @@ func (e *Engine) Loop() {
 		case sdl.TextInputEvent:
 			pressedKey := t.GetText()
 			e.InsertChar(rune(pressedKey[0]), DEBUG_CUR_ID)
-			e.renderText(DEBUG_CUR_ID)
+			e.RenderText(DEBUG_CUR_ID)
 			break
 		case sdl.KeyboardEvent:
 			// this branch active too when sdl.TextInputEvent
@@ -513,7 +540,7 @@ func (e *Engine) Loop() {
 				// TODO 4 -> SPACE_IN_ONE_TAB
 				e.InsertChar('\t', DEBUG_CUR_ID)
 			}
-			e.renderText(DEBUG_CUR_ID)
+			e.RenderText(DEBUG_CUR_ID)
 			break
 		}
 	}
@@ -551,7 +578,7 @@ func (e *Engine) EraseChar(key sdl.Scancode, cursorId int64) {
 	switch key {
 	case sdl.SCANCODE_BACKSPACE:
 		err = e.text.RemoveCharBefore(cursorId)
-        //print("res: ", e.text.GetScreenString(0))
+		//print("res: ", e.text.GetScreenString(0))
 	case sdl.SCANCODE_DELETE:
 		err = e.text.RemoveCharAfter(cursorId)
 	}
@@ -583,86 +610,86 @@ func (e *Engine) InsertChar(value rune, cursorId int64) {
 	}
 }
 
-
 func Contains(s []rune, e rune) bool {
-    for _, a := range s {
-        if a == e {
-            return true
-        }
-    }
-    return false
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
 }
+
 // возвращает массив длины текста
 // на i-ой позиции цвет i-го символа строки
-func HighlightTokensInString(s string) []uint32 {
-    result := make([]uint32, len(s))
-    separators := []rune{' ','\n','(','{','}',')',';','/', '"'}
-    curStr := ""
-    lineCommentFlag := 0
-    stringStartFlag := 0
-	for ind, char := range s {
-        if stringStartFlag == 1 {
-            if char == '"' {
-                stringStartFlag = 0
-            }
-            // гарантируется что существует предыдущий символ, т.к. в данной
-            // ветке рассматривается случай, когда до текущего символа встретился '"'
-            result[ind - 1] = textmanager.GREEN
-            result[ind] = textmanager.GREEN
-            continue
-        }
+// func HighlightTokensInString(s string) []uint32 {
+// 	result := make([]uint32, len(s))
+// 	separators := []rune{' ', '\n', '(', '{', '}', ')', ';', '/', '"'}
+// 	curStr := ""
+// 	lineCommentFlag := 0
+// 	stringStartFlag := 0
+// 	for ind, char := range s {
+// 		if stringStartFlag == 1 {
+// 			if char == '"' {
+// 				stringStartFlag = 0
+// 			}
+// 			// гарантируется что существует предыдущий символ, т.к. в данной
+// 			// ветке рассматривается случай, когда до текущего символа встретился '"'
+// 			result[ind-1] = textmanager.GREEN
+// 			result[ind] = textmanager.GREEN
+// 			continue
+// 		}
 
-        if char == '/' {
-            lineCommentFlag++
-        } else if lineCommentFlag < 2 {
-            lineCommentFlag = 0
-        }
+// 		if char == '/' {
+// 			lineCommentFlag++
+// 		} else if lineCommentFlag < 2 {
+// 			lineCommentFlag = 0
+// 		}
 
-        if lineCommentFlag >= 2 {
-            // гарантируется что существует предыдущий символ, т.к. в данной
-            // ветке рассматривается случай, когда идёт два символа '\' подряд
-            result[ind - 1] = textmanager.GREY
-            result[ind] = textmanager.GREY
-            if char == '\n' {
-                lineCommentFlag = 0
-                curStr = ""
-            }
-            continue
-        }
+// 		if lineCommentFlag >= 2 {
+// 			// гарантируется что существует предыдущий символ, т.к. в данной
+// 			// ветке рассматривается случай, когда идёт два символа '\' подряд
+// 			result[ind-1] = textmanager.GREY
+// 			result[ind] = textmanager.GREY
+// 			if char == '\n' {
+// 				lineCommentFlag = 0
+// 				curStr = ""
+// 			}
+// 			continue
+// 		}
 
-        if char == '"' {
-            stringStartFlag = 1
-        }
+// 		if char == '"' {
+// 			stringStartFlag = 1
+// 		}
 
-        result[ind] = textmanager.FNTCLR
-        if Contains(separators, char) {
-			if color, ok := textmanager.TokensColor[curStr]; ok {
-                // start coloring
-                for i:= ind - len(curStr); i < ind; i+=1 {
-                    result[i] = color
-                }
-			}
-            curStr = ""
-        } else {
-            curStr += string(char)
-        }
-    }
-    if color, ok := textmanager.TokensColor[curStr]; ok {
-        for i:= len(s) - len(curStr); i < len(s); i+=1 {
-            result[i] = color
-        }
-    }
-    // assert(len(s) == len(result))
-    return result
-}
+// 		result[ind] = textmanager.FNTCLR
+// 		if Contains(separators, char) {
+// 			if color, ok := textmanager.TokensColor[curStr]; ok {
+// 				// start coloring
+// 				for i := ind - len(curStr); i < ind; i += 1 {
+// 					result[i] = color
+// 				}
+// 			}
+// 			curStr = ""
+// 		} else {
+// 			curStr += string(char)
+// 		}
+// 	}
+// 	if color, ok := textmanager.TokensColor[curStr]; ok {
+// 		for i := len(s) - len(curStr); i < len(s); i += 1 {
+// 			result[i] = color
+// 		}
+// 	}
+// 	// assert(len(s) == len(result))
+// 	return result
+// }
 
 // TODO переписать)))
-func (e *Engine) renderText(cursorId int64) {
+func (e *Engine) RenderText(cursorId int64) {
 	e.renderer.Clear()
 	var (
 		// e.font.GetSpaceBetween равен 0, поэтому он сейчас ни на что не влияет || тут +7 px это просто отступ от первой цифры
-		col int32 = e.CharCountInLineNumber
-		paddingLeft int32 = (e.font.GetSpaceBetween()+e.cache.PreRenderredCharTextures[rune('1')][textmanager.FNTCLR].Width)*col + 7
+		col         int32 = e.CharCountInLineNumber
+		paddingLeft int32 = (e.font.GetSpaceBetween()+e.cache.PreRenderredCharTextures[rune('1')][Colors[textmanager.Normal]].Width)*col + 7
 		X           int32 = paddingLeft
 		Y           int32 = 0
 		row         int32 = 0
@@ -673,89 +700,90 @@ func (e *Engine) renderText(cursorId int64) {
 	)
 
 	e.renderBackground(paddingLeft)
-    var currentColor uint32 = textmanager.FNTCLR
-	for _, c := range e.text.GetScreenString(0) {
-        if c == '\n' {
-            Y += e.font.GetSize()
-            X = paddingLeft + e.font.GetSpaceBetween()
-            row++
-            col = e.CharCountInLineNumber
-            continue
-        }
-        if col >= e.cache.RectangleMatrix.Columns {
-            continue // это из-за  лишних чимволов которые появляются из-за отсптупа для номеров строк 
-        }
-        // TODO write setter for this ->
-		e.GetRectFromMatrix(row, col).H = e.font.GetSize()
-		e.GetRectFromMatrix(row, col).W = e.cache.PreRenderredCharTextures[rune(c)][currentColor].Width
-		e.GetRectFromMatrix(row, col).X = X
-		e.GetRectFromMatrix(row, col).Y = Y
-		e.renderer.Copy(e.cache.PreRenderredCharTextures[rune(c)][currentColor].Texture, nil, e.GetRectFromMatrix(row, col))
-		X += e.cache.PreRenderredCharTextures[rune(c)][currentColor].Width + e.font.GetSpaceBetween()
-        col++
-	}
-	//println("delta:",  delta)
-    /*
-	//leftBorder := e.text.Cursors[cursorId].ScreenLeft
-	//println("LeftBorderText: ", leftBorder)
-	if e.text.Cursors[cursorId].Col < leftBorder {
-		e.text.Cursors[cursorId].ScreenLeft = e.text.Cursors[cursorId].Col + 1
-		delta = e.text.Cursors[cursorId].ScreenLeft
-	} else if delta >= leftBorder {
-		e.text.Cursors[cursorId].ScreenLeft = delta
-	} else {
-		delta = leftBorder
-	}
-
-	if delta < 0 {
-		delta = 0
-	}
-
-    // for tokens
-    var currentColor uint32 = textmanager.FNTCLR
-
-    tokens := HighlightTokensInString(e.text.GetScreenString(0))
-	for ind, c := range e.text.GetScreenString(0) {
-        currentColor = tokens[ind]
-		if col-4 < delta {
-			if c == '\n' {
-				Y += e.font.GetSize()
-				X = paddingLeft + e.font.GetSpaceBetween()
-				row++
-				col = 4
-			} else {
-				col++
-			}
-			continue
-		}
-		if col-delta+1 >= e.cache.RectangleMatrix.Columns {
-			if c == '\n' {
-				Y += e.font.GetSize()
-				X = paddingLeft + e.font.GetSpaceBetween()
-				row++
-				col = 4
-			} else {
-				col++
-			}
-			continue
-		}
-		//println("col - del: ", col - delta, "c:", rune(c))
-		e.GetRectFromMatrix(row, col-delta).H = e.font.GetSize()
-		e.GetRectFromMatrix(row, col-delta).W = e.cache.PreRenderredCharTextures[rune(c)][currentColor].Width
-		e.GetRectFromMatrix(row, col-delta).X = X
-		e.GetRectFromMatrix(row, col-delta).Y = Y
-		e.renderer.Copy(e.cache.PreRenderredCharTextures[rune(c)][currentColor].Texture, nil, e.GetRectFromMatrix(row, col-delta))
-		X += e.cache.PreRenderredCharTextures[rune(c)][currentColor].Width + e.font.GetSpaceBetween()
-		col++
+	screenString, screenTerms := e.text.GetScreenStringWithTerms(0)
+	for i, c := range screenString {
+		t := screenTerms[i]
 		if c == '\n' {
 			Y += e.font.GetSize()
 			X = paddingLeft + e.font.GetSpaceBetween()
 			row++
-			col = 4
+			col = e.CharCountInLineNumber
+			continue
 		}
+		if col >= e.cache.RectangleMatrix.Columns {
+			continue // это из-за  лишних чимволов которые появляются из-за отсптупа для номеров строк
+		}
+		// TODO write setter for this ->
+		e.GetRectFromMatrix(row, col).H = e.font.GetSize()
+		e.GetRectFromMatrix(row, col).W = e.cache.PreRenderredCharTextures[rune(c)][Colors[t]].Width
+		e.GetRectFromMatrix(row, col).X = X
+		e.GetRectFromMatrix(row, col).Y = Y
+		e.renderer.Copy(e.cache.PreRenderredCharTextures[rune(c)][Colors[t]].Texture, nil, e.GetRectFromMatrix(row, col))
+		X += e.cache.PreRenderredCharTextures[rune(c)][Colors[t]].Width + e.font.GetSpaceBetween()
+		col++
 	}
+	//println("delta:",  delta)
+	/*
+			//leftBorder := e.text.Cursors[cursorId].ScreenLeft
+			//println("LeftBorderText: ", leftBorder)
+			if e.text.Cursors[cursorId].Col < leftBorder {
+				e.text.Cursors[cursorId].ScreenLeft = e.text.Cursors[cursorId].Col + 1
+				delta = e.text.Cursors[cursorId].ScreenLeft
+			} else if delta >= leftBorder {
+				e.text.Cursors[cursorId].ScreenLeft = delta
+			} else {
+				delta = leftBorder
+			}
 
-    */
+			if delta < 0 {
+				delta = 0
+			}
+
+		    // for tokens
+		    var currentColor uint32 = textmanager.FNTCLR
+
+		    tokens := HighlightTokensInString(e.text.GetScreenString(0))
+			for ind, c := range e.text.GetScreenString(0) {
+		        currentColor = tokens[ind]
+				if col-4 < delta {
+					if c == '\n' {
+						Y += e.font.GetSize()
+						X = paddingLeft + e.font.GetSpaceBetween()
+						row++
+						col = 4
+					} else {
+						col++
+					}
+					continue
+				}
+				if col-delta+1 >= e.cache.RectangleMatrix.Columns {
+					if c == '\n' {
+						Y += e.font.GetSize()
+						X = paddingLeft + e.font.GetSpaceBetween()
+						row++
+						col = 4
+					} else {
+						col++
+					}
+					continue
+				}
+				//println("col - del: ", col - delta, "c:", rune(c))
+				e.GetRectFromMatrix(row, col-delta).H = e.font.GetSize()
+				e.GetRectFromMatrix(row, col-delta).W = e.cache.PreRenderredCharTextures[rune(c)][currentColor].Width
+				e.GetRectFromMatrix(row, col-delta).X = X
+				e.GetRectFromMatrix(row, col-delta).Y = Y
+				e.renderer.Copy(e.cache.PreRenderredCharTextures[rune(c)][currentColor].Texture, nil, e.GetRectFromMatrix(row, col-delta))
+				X += e.cache.PreRenderredCharTextures[rune(c)][currentColor].Width + e.font.GetSpaceBetween()
+				col++
+				if c == '\n' {
+					Y += e.font.GetSize()
+					X = paddingLeft + e.font.GetSpaceBetween()
+					row++
+					col = 4
+				}
+			}
+
+	*/
 	cur := e.text.Cursors[cursorId]
 	row = 0
 	col = 3
@@ -806,10 +834,10 @@ func (e *Engine) renderBackground(paddingLeft int32) {
 	   it would be more efficient to do this directly using the function SDL_RenderFillRect."
 	*/
 	e.renderLineNumbersBackground(paddingLeft)
-	e.renderTextBackground(paddingLeft)
+	e.RenderTextBackground(paddingLeft)
 }
 
-func (e *Engine) renderTextBackground(paddingLeft int32) {
+func (e *Engine) RenderTextBackground(paddingLeft int32) {
 	w, h := e.window.GetSize()
 
 	e.renderer.SetDrawColor(hexToRBGA(e.TextBackgroundColor))
@@ -848,8 +876,8 @@ func main() {
 		FontSize                   int32  = 30 // in px!
 		SpaceBetween               int32  = 0
 		FontFilename               string = "MonoNL-Regular.ttf"
-		FontColor                  uint32 = textmanager.FNTCLR
-		LineNumbersColor           uint32 = textmanager.LNNMBC
+		FontColor                  uint32 = Colors[textmanager.Normal]
+		LineNumbersColor           uint32 = LNNMBC
 		LineNumbersBackgroundColor uint32 = 0x44475aFF
 		TextBackgroundColor        uint32 = 0x282a36FF
 		CursorColor                uint32 = 0xDAD2D8FF
